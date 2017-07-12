@@ -29,36 +29,46 @@ class Model():
 		self.tsteps_per_ascii = args.tsteps_per_ascii
 		self.data_dir = args.data_dir
 
+		# Creates an initializer for the model variables
 		self.graves_initializer = tf.truncated_normal_initializer(mean=0., stddev=.075, seed=None, dtype=tf.float32)
 		self.window_b_initializer = tf.truncated_normal_initializer(mean=-3.0, stddev=.25, seed=None, dtype=tf.float32) # hacky initialization
 
 		self.logger.write('\tusing alphabet{}'.format(self.alphabet))
-		self.char_vec_len = len(self.alphabet) + 1 #plus one for <UNK> token
+		# UNK Token means Unknown token, for all the words not in the vocabularly, example names
+		self.char_vec_len = len(self.alphabet) + 1 #plus one for <UNK> token # Alphabets small 26 + Alphabet caps 26 + space + UKN Token
 		self.ascii_steps = args.tsteps/args.tsteps_per_ascii
 
 
 		# ----- build the basic recurrent network architecture
+		# Creates 3 cells, each containing rnn_size (Default = 100) hidden unit (Basically 100 neuron OR sigmoid)
 		cell_func = tf.contrib.rnn.LSTMCell # could be GRUCell or RNNCell
 		self.cell0 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
 		self.cell1 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
 		self.cell2 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
 
+		# Checks the dropout , if 1 then it keeps all the previous data, if 0 then removes it all.
+		# If dropout < 1 then enters the if condition which makes the output_keep_prob = self.dropout (Default = 0.85)
 		if (self.train and self.dropout < 1): # training mode
 			self.cell0 = tf.contrib.rnn.DropoutWrapper(self.cell0, output_keep_prob = self.dropout)
 			self.cell1 = tf.contrib.rnn.DropoutWrapper(self.cell1, output_keep_prob = self.dropout)
 			self.cell2 = tf.contrib.rnn.DropoutWrapper(self.cell2, output_keep_prob = self.dropout)
 
+
+		# Creates input placeholder inorder not to generate an error, with size 1st dimension, not defined, second dimension tsteps, third dimension 3 elements
 		self.input_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
+		# Same as input data
 		self.target_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
+		# 
 		self.istate_cell0 = self.cell0.zero_state(batch_size=self.batch_size, dtype=tf.float32)
 		self.istate_cell1 = self.cell1.zero_state(batch_size=self.batch_size, dtype=tf.float32)
 		self.istate_cell2 = self.cell2.zero_state(batch_size=self.batch_size, dtype=tf.float32)
 
 		#slice the input volume into separate vols for each tstep
-		inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(self.input_data, self.tsteps, 1)]
+		# Divided the tensor placeholder data into 150 individual tensor flow inputs
+		inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(self.input_data, self.tsteps, 1)]		
 		#build cell0 computational graph
+		# Output of cell 0 and next state (final state) of cell 0
 		outs_cell0, self.fstate_cell0 = tf.contrib.legacy_seq2seq.rnn_decoder(inputs, self.istate_cell0, self.cell0, loop_function=None, scope='cell0')
-
 
 	# ----- build the gaussian character window
 		def get_window(alpha, beta, kappa, c):
@@ -66,17 +76,29 @@ class Model():
 			# c -> [? x ascii_steps x alphabet] and is a tf matrix
 			ascii_steps = c.get_shape()[1].value #number of items in sequence
 			phi = get_phi(ascii_steps, alpha, beta, kappa)
+			# Window shape ==> 32,1,54
 			window = tf.matmul(phi,c)
+			# Window shape ==> 32,54
 			window = tf.squeeze(window, [1]) # window ~ [?,alphabet]
 			return window, phi
 
 		#get phi for all t,u (returns a [1 x tsteps] matrix) that defines the window
 		def get_phi(ascii_steps, alpha, beta, kappa):
 			# alpha, beta, kappa -> [?,kmixtures,1] and each is a tf variable
+			# np.linspace ==> Creates a float array starting from 0 till ascii_steps -1
 			u = np.linspace(0,ascii_steps-1,ascii_steps) # weight all the U items in the sequence
+			# Kappa_term will have 32 columns, 1 row, each row contains 6
+			# Subtraction and multiplication supports broadcasting CHECK : https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html
 			kappa_term = tf.square( tf.subtract(kappa,u))
+			# exp_term shape ==> 32,1,6
+			# beta shape ==> 32,1,1
 			exp_term = tf.multiply(-beta,kappa_term)
+			# alpha shape ==> 32,1,1
+			# phi_k shape ==> 32,1,6
 			phi_k = tf.multiply(alpha, tf.exp(exp_term))
+			# phi shape ==> 32,1,6
+			# reduce sum keeps the dimensions but sums up the elements in each dimension
+			# Why?
 			phi = tf.reduce_sum(phi_k,1, keep_dims=True)
 			return phi # phi ~ [?,1,ascii_steps]
 
@@ -86,15 +108,23 @@ class Model():
 			with tf.variable_scope('window',reuse=reuse):
 				window_w = tf.get_variable("window_w", [hidden, n_out], initializer=self.graves_initializer)
 				window_b = tf.get_variable("window_b", [n_out], initializer=self.window_b_initializer)
+
+			# Matrix multiplication of X (2D tensor in this case, the output of cell 0), with the Weight, and adds the Bias
+			# w.x + b 
 			abk_hats = tf.nn.xw_plus_b(out_cell0, window_w, window_b) # abk_hats ~ [?,n_out]
+			# e^ tf reshaped
+			# Why?
 			abk = tf.exp(tf.reshape(abk_hats, [-1, 3*kmixtures,1])) # abk_hats ~ [?,n_out] = "alpha, beta, kappa hats"
 
 			alpha, beta, kappa = tf.split(abk, 3, 1) # alpha_hat, etc ~ [?,kmixtures]
 			kappa = kappa + prev_kappa
 			return alpha, beta, kappa # each ~ [?,kmixtures,1]
 
+		# Default KMixture = 1
+		# Ascii_steps = tsteps / tsteps_per_ascii (Number of ascii chars (Default 150/25 = 6))
 		self.init_kappa = tf.placeholder(dtype=tf.float32, shape=[None, self.kmixtures, 1]) 
 		self.char_seq = tf.placeholder(dtype=tf.float32, shape=[None, self.ascii_steps, self.char_vec_len])
+
 		prev_kappa = self.init_kappa
 		prev_window = self.char_seq[:,0,:]
 
@@ -103,8 +133,17 @@ class Model():
 		for i in range(len(outs_cell0)):
 			[alpha, beta, new_kappa] = get_window_params(i, outs_cell0[i], self.kmixtures, prev_kappa, reuse=reuse)
 			window, phi = get_window(alpha, beta, new_kappa, self.char_seq)
+
+
+			# Outs_cell0[i] shape ==> 32,100
+			# Window shape ==> 32,54
+
 			outs_cell0[i] = tf.concat((outs_cell0[i],window), 1) #concat outputs
+			#Outs_cell0[i] new shape ==> 32,154
+			#Inputs[i] shape ==> ?,3
 			outs_cell0[i] = tf.concat((outs_cell0[i],inputs[i]), 1) #concat input data
+			#Outs_cell0[i] new shape ==> 32,157
+
 			prev_kappa = new_kappa
 			prev_window = window
 			reuse = True
@@ -116,8 +155,9 @@ class Model():
 
 
 	# ----- finish building LSTMs 2 and 3
+		# Connects output of cell 0 as initial cell 1 to input of cell 1
 		outs_cell1, self.fstate_cell1 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell0, self.istate_cell1, self.cell1, loop_function=None, scope='cell1')
-
+		# Connects output of cell 1 as inital cell 2 to input of cell 2
 		outs_cell2, self.fstate_cell2 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell1, self.istate_cell2, self.cell2, loop_function=None, scope='cell2')
 
 	# ----- start building the Mixture Density Network on top (start with a dense layer to predict the MDN params)
@@ -126,7 +166,10 @@ class Model():
 			mdn_w = tf.get_variable("output_w", [self.rnn_size, n_out], initializer=self.graves_initializer)
 			mdn_b = tf.get_variable("output_b", [n_out], initializer=self.graves_initializer)
 
+		#Outs_cell2 ==> t_steps,32,100 (Default = 150,32,100)
 		out_cell2 = tf.reshape(tf.concat(outs_cell2, 1), [-1, args.rnn_size]) #concat outputs for efficiency
+		#Out_cell2 shape ==> 32,15000 Adds all rows together (150 and the rnn_size (Default 100))
+		# Output shape ==> 4800, 49
 		output = tf.nn.xw_plus_b(out_cell2, mdn_w, mdn_b) #data flows through dense nn
 
 
@@ -173,7 +216,10 @@ class Model():
 			return [eos, pi, mu1, mu2, sigma1, sigma2, rho]
 
 		# reshape target data (as we did the input data)
+		# flat_target_data shape ==> ?,3  
+		# (Most probably tsteps * number of data )
 		flat_target_data = tf.reshape(self.target_data,[-1, 3])
+		# Each array will contain ?,1
 		[x1_data, x2_data, eos_data] = tf.split(flat_target_data, 3, 1) #we might as well split these now
 
 		[self.eos, self.pi, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho] = get_mdn_coef(output)

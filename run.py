@@ -61,20 +61,31 @@ def train_model(args):
 	logger.write("{}\n".format(args))
 	logger.write("loading data...")
 	data_loader = DataLoader(args, logger=logger)
-	
+	# Preprocessing complete, created a validation set and training set , and got the number of batches.
+
 	logger.write("building model...")
 	model = Model(args, logger=logger)
 
 	logger.write("attempt to load saved model...")
 	load_was_success, global_step = model.try_load_model(args.save_path)
 
+	# Validates data once, which validates only 32 lines out of the entire validation set
 	v_x, v_y, v_s, v_c = data_loader.validation_data()
+	# INPUTS data to the model
+	# V_X ==> x_batch 
+	# v_y ==> y_batch (Which is the next point after the x_batch)
+	# v_c ==> One_hot sequence
+	# Target_data ==> This is the next point to be predicted
 	valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
 
 	logger.write("training...")
 	model.sess.run(tf.assign(model.decay, args.decay ))
 	model.sess.run(tf.assign(model.momentum, args.momentum ))
 	running_average = 0.0 ; remember_rate = 0.99
+
+	# Global_steps is the number indented at the end of the file
+	# Nepochs is the number the training occurs 
+	# nBatches is the number of the batches
 	for e in range(global_step/args.nbatches, args.nepochs):
 		model.sess.run(tf.assign(model.learning_rate, args.learning_rate * (args.lr_decay ** e)))
 		logger.write("learning rate: {}".format(model.learning_rate.eval()))
@@ -84,7 +95,6 @@ def train_model(args):
 		kappa = np.zeros((args.batch_size, args.kmixtures, 1))
 
 		for b in range(global_step%args.nbatches, args.nbatches):
-			
 			i = e * args.nbatches + b
 			if global_step is not 0 : i+=1 ; global_step = 0
 

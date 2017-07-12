@@ -1,0 +1,9 @@
+#!/bin/bash
+echo "Clearing terminal window"
+clear
+# echo "Deleting the old ./data/strokes_training_data.cpkl"
+# rm -f ./data/strokes_training_data.cpkl
+echo "Creating a logs folder if not exists"
+mkdir -p logs
+echo "Now running the run.py file"
+python run.py --train
