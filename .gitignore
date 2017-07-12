@@ -1,4 +1,4 @@
 *.pyc
 figures/
-train_scribe.txt
-sample_scribe.txt
+logs/train_scribe.txt
+logs/sample_scribe.txt

@@ -5,5 +5,7 @@ clear
 # rm -f ./data/strokes_training_data.cpkl
 echo "Creating a logs folder if not exists"
 mkdir -p logs
+echo "Creating a figures folder if not exists"
+mkdir -p logs/figures
 echo "Now running the run.py file"
 python run.py --train
