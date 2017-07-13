@@ -269,14 +269,15 @@ class DataLoader():
         idx_path = os.path.join(self.data_dir, "idx.cpkl")
         if not (os.path.exists(idx_path)) :
             self.idx_perm = np.random.permutation(len(self.stroke_data))
+            self.pointer = 0
             f = open(idx_path, "wb")
-            pickle.dump([self.idx_perm], f, protocol=2)
+            pickle.dump([self.idx_perm, self.pointer], f, protocol=2)
             f.close()
         else:
             f = open(idx_path, "rb")
-            [self.idx_perm] = pickle.load(f)
+            [self.idx_perm, self.pointer] = pickle.load(f)
             f.close()
-        self.pointer = 0
+        
 
 # utility function for converting input ascii characters into vectors the network can understand.
 # index position 0 means "unknown"
