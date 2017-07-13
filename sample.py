@@ -42,7 +42,7 @@ def sample(input_text, model, args):
     [c0, c1, c2, h0, h1, h2] = get_style_states(model, args) # get numpy zeros states for all three LSTMs
     kappa = np.zeros((1, args.kmixtures, 1))   # attention mechanism's read head should start at index 0
     prev_x = np.asarray([[[0, 0, 1]]], dtype=np.float32)     # start with a pen stroke at (0,0)
-
+    args.tsteps = args.tsteps_per_ascii * len(input_text);
     strokes, pis, windows, phis, kappas = [], [], [], [], [] # the data we're going to generate will go here
 
     finished = False ; i = 0

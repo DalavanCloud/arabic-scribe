@@ -4,12 +4,20 @@ Scribe: Realistic Handriting in Tensorflow
 
 
 TRAINING MODE...
-Namespace(alphabet=' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', batch_size=32, bias=1.0, data_dir='./data', data_scale=50, decay=0.95, dropout=0.85, grad_clip=10.0, kmixtures=1, learning_rate=0.0001, log_dir='./logs/', lr_decay=1.0, momentum=0.9, nbatches=500, nepochs=250, nmixtures=8, optimizer='rmsprop', rnn_size=100, save_every=500, save_path='saved/model.ckpt', sleep_time=300, style=-1, text='', train=True, tsteps=150, tsteps_per_ascii=25)
+Namespace(alphabet='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', batch_size=32, bias=1.0, data_dir='./data', data_scale=50, decay=0.95, dropout=0.85, grad_clip=10.0, kmixtures=1, learning_rate=0.0001, log_dir='./logs/', lr_decay=1.0, momentum=0.9, nbatches=500, nepochs=250, nmixtures=8, optimizer='rmsprop', rnn_size=100, save_every=500, save_path='saved/model.ckpt', sleep_time=300, style=-1, text='', train=True, tsteps=360, tsteps_per_ascii=24)
 
 loading data...
 	loaded dataset:
-		11315 train individual data points
-		595 valid individual data points
-		353 batches
+		10615 train individual data points
+		558 valid individual data points
+		331 batches
 building model...
-	using alphabet abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+	using alphabetabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+attempt to load saved model...
+loaded model: saved/model.ckpt-60500
+training...
+learning rate: 9.99999974738e-05
+60510/125000, loss = -2.241, regloss = -0.22371, valid_loss = -1.986, time = 2.294
+60520/125000, loss = -2.068, regloss = -0.40669, valid_loss = -1.970, time = 3.451
+60530/125000, loss = -2.146, regloss = -0.57635, valid_loss = -1.928, time = 3.165
+60540/125000, loss = -2.073, regloss = -0.72749, valid_loss = -1.980, time = 2.592

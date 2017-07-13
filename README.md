@@ -1,3 +1,13 @@
+Changes to optimize and pretrained model:
+=========================================
+1. Remove spaces from ascii before training.
+2. Saves permutation to only reset it after it only completed on it.
+3. Changes to the tsteps and tsteps_per_ascii so we take 15 characters with each one taking 24.
+4. Save permutation to a file to load from if we didn't finish.
+5. Sampling calculates tsteps from the length of the passed character.
+
+
+
 Scribe: Realistic Handwriting in Tensorflow
 =======
 

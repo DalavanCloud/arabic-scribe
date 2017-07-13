@@ -169,7 +169,12 @@ class DataLoader():
         f.close()
         self.logger.write("\tfinished parsing dataset. saved {} lines".format(len(strokes)))
 
-
+    def calculate_average(self):
+        average = 0
+        for i in range(len(self.raw_stroke_data)):
+            average += len(self.raw_stroke_data[i]) / len(self.raw_ascii_data[i].replace(" ",""))
+        average = average / len(self.raw_stroke_data)
+        return average
     # Needs optimizing, Does the first preprocessing steps and saves the file , then opens it again in load_preprocessed, does more preprocessing over here
     # without saving the data which is not optimized.
     def load_preprocessed(self, data_file):
@@ -188,11 +193,12 @@ class DataLoader():
 
         # every 1 in 20 (5%) will be used for validation data
         cur_data_counter = 0
-
+        # print(self.calculate_average())
         for i in range(len(self.raw_stroke_data)):
             data = self.raw_stroke_data[i]
+            ascii = self.raw_ascii_data[i].replace(" ","")
             # Checks if number of points > tsteps + 2 then they are valid, else ignore
-            if len(data) > (self.tsteps+2):
+            if len(data) > (self.tsteps+2) and len(ascii) > self.ascii_steps:
                 # removes large gaps from the data
                 # Since points are relative to each other, then if the distance between two consecutive points are large, then that means it is done by mistake
                 # Self.limit = 500 , meaning points can't be further from each other than 500 pixels
@@ -207,10 +213,10 @@ class DataLoader():
                 # Takes one of every 20 xml files and adds them to the validation set
                 if cur_data_counter % 20 == 0:
                   self.valid_stroke_data.append(data)
-                  self.valid_ascii_data.append(self.raw_ascii_data[i])
+                  self.valid_ascii_data.append(ascii)
                 else:
                     self.stroke_data.append(data)
-                    self.ascii_data.append(self.raw_ascii_data[i])
+                    self.ascii_data.append(ascii)
 
 
         # Divides the number of lines to be studied by the batch_size (Default = 32) to make batches
@@ -255,10 +261,21 @@ class DataLoader():
     def tick_batch_pointer(self):
         self.pointer += 1
         if (self.pointer >= len(self.stroke_data)):
+            idx_path = os.path.join(self.data_dir, "idx.cpkl")
+            os.remove(idx_path)
             self.reset_batch_pointer()
     def reset_batch_pointer(self):
         # Generates an array containing index of Random stroke_data
-        self.idx_perm = np.random.permutation(len(self.stroke_data))
+        idx_path = os.path.join(self.data_dir, "idx.cpkl")
+        if not (os.path.exists(idx_path)) :
+            self.idx_perm = np.random.permutation(len(self.stroke_data))
+            f = open(idx_path, "wb")
+            pickle.dump([self.idx_perm], f, protocol=2)
+            f.close()
+        else:
+            f = open(idx_path, "rb")
+            [self.idx_perm] = pickle.load(f)
+            f.close()
         self.pointer = 0
 
 # utility function for converting input ascii characters into vectors the network can understand.
