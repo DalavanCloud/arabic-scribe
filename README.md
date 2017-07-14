@@ -15,18 +15,12 @@ Changes to optimize and pretrained model:
 
 Samples
 --------
-"project"
-![Sample output 1](static/iter-125000-l-project.png?raw=true)
-"mahmoud"
-![Sample output 2](static/iter-125000-l-mahmoud.png?raw=true)
-"nourhan"
-![Sample output 3](static/iter-125000-l-nourhan.png?raw=true)
-"karim"
-![Sample output 4](static/iter-125000-l-karim.png?raw=true)
-"learning"
-![Sample output 5](static/iter-125000-l-learning.png?raw=true)
-"machine"
-![Sample output 6](static/iter-125000-l-machine.png?raw=true)
+* "project" : ![Sample output 1](static/iter-125000-l-project.png?raw=true)
+* "mahmoud" : ![Sample output 2](static/iter-125000-l-mahmoud.png?raw=true)
+* "nourhan" : ![Sample output 3](static/iter-125000-l-nourhan.png?raw=true)
+* "karim" : ![Sample output 4](static/iter-125000-l-karim.png?raw=true)
+* "learning" : ![Sample output 5](static/iter-125000-l-learning.png?raw=true)
+* "machine" : ![Sample output 6](static/iter-125000-l-machine.png?raw=true)
 
 Jupyter Notebooks
 --------
