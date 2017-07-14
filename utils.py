@@ -17,7 +17,8 @@ class DataLoader():
         self.ascii_steps = args.tsteps/args.tsteps_per_ascii
         self.logger = logger
         self.limit = limit # removes large noisy gaps in the data
-
+        self.idx_path = os.path.join(self.data_dir, "idx.cpkl");
+        self.pointer_path = os.path.join(self.data_dir, "pointer.cpkl")
         data_file = os.path.join(self.data_dir, "strokes_training_data.cpkl")
         stroke_dir = self.data_dir + "/lineStrokes"
         ascii_dir = self.data_dir + "/ascii"
@@ -261,22 +262,48 @@ class DataLoader():
     def tick_batch_pointer(self):
         self.pointer += 1
         if (self.pointer >= len(self.stroke_data)):
-            idx_path = os.path.join(self.data_dir, "idx.cpkl")
-            os.remove(idx_path)
+            os.remove(self.idx_path)
+            os.remove(self.pointer_path)
             self.reset_batch_pointer()
     def reset_batch_pointer(self):
         # Generates an array containing index of Random stroke_data
-        idx_path = os.path.join(self.data_dir, "idx.cpkl")
-        if not (os.path.exists(idx_path)) :
+        if not (os.path.exists(self.idx_path)) :
             self.idx_perm = np.random.permutation(len(self.stroke_data))
-            self.pointer = 0
-            f = open(idx_path, "wb")
-            pickle.dump([self.idx_perm, self.pointer], f, protocol=2)
-            f.close()
+            self.save_idx()
         else:
-            f = open(idx_path, "rb")
-            [self.idx_perm, self.pointer] = pickle.load(f)
-            f.close()
+            self.load_idx()
+        if not (os.path.exists(self.pointer_path)):
+            self.pointer = 0
+            self.save_pointer()
+        else:
+            self.load_pointer()
+
+
+            
+    def save_pointer(self):
+        if(os.path.exists(self.pointer_path)):
+            os.remove(self.pointer_path)
+        f = open(self.pointer_path, "wb")
+        pickle.dump([self.pointer], f, protocol=2)
+        f.close()
+
+    def load_pointer(self):
+        f = open(pointer_path, "rb")
+        [self.pointer] = pickle.load(f)
+        f.close()
+
+    def save_idx(self):
+        if os.path.exists(self.idx_path):
+            os.remove(self.idx_path)
+        f = open(self.idx_path, "wb")
+        pickle.dump([self.idx_perm], f, protocol=2)
+        f.close()
+
+    def load_idx(self):
+        f = open(idx_path, "rb")
+        [self.idx_perm] = pickle.load(f)
+        f.close()
+
         
 
 # utility function for converting input ascii characters into vectors the network can understand.

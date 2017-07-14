@@ -100,6 +100,7 @@ def train_model(args):
 
 			if i % args.save_every == 0 and (i > 0):
 				model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
+				data_loader.save_pointer()
 
 			start = time.time()
 			x, y, s, c = data_loader.next_batch()
@@ -118,6 +119,8 @@ def train_model(args):
 			end = time.time()
 			if i % 10 is 0: logger.write("{}/{}, loss = {:.3f}, regloss = {:.5f}, valid_loss = {:.3f}, time = {:.3f}" \
 				.format(i, args.nepochs * args.nbatches, train_loss, running_average, valid_loss, end - start) )
+	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
+	data_loader.save_pointer()
 
 def sample_model(args, logger=None):
 	if args.text == '':
