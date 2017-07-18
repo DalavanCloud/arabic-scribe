@@ -4,6 +4,7 @@ import tensorflow as tf
 import argparse
 import time
 import os
+import random
 
 from model import Model
 from utils import *
@@ -141,16 +142,28 @@ def sample_model(args, logger=None):
 
 	if load_was_success:
 		for s in strings:
-			strokes, phis, windows, kappas = sample(s, model, args)
-
+			words = s.split(" ")
+			strokes, phis, windows, kappas = [], [], [], []
+			prev_x = 0
+			for word in words:
+				strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model, args)
+				mod_strokes = np.asarray(strokes_temp, dtype = np.float32)
+				mod_strokes[:,0] += prev_x
+				mod_strokes[len(mod_strokes) - 1, 5] = 1
+				strokes.append(mod_strokes)
+				phis = combine_image_matrixes(phis, phis_temp)
+				windows = combine_image_matrixes(windows, windows_temp)
+				kappas.append(kappas_temp)
+				prev_x = mod_strokes[:,0].max() + random.uniform(2,5)
+			windows = np.vstack(windows)	
+			kappas = np.vstack(kappas)
+			strokes = np.vstack(strokes)
 			w_save_path = '{}figures/iter-{}-w-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))
 			g_save_path = '{}figures/iter-{}-g-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))
 			l_save_path = '{}figures/iter-{}-l-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))
-
 			window_plots(phis, windows, save_path=w_save_path)
 			gauss_plot(strokes, 'Heatmap for "{}"'.format(s), figsize = (2*len(s),4), save_path=g_save_path)
 			line_plot(strokes, 'Line plot for "{}"'.format(s), figsize = (len(s),2), save_path=l_save_path)
-
 			# make sure that kappas are reasonable
 			logger.write( "kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
 	else:

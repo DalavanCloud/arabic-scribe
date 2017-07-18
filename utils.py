@@ -325,6 +325,24 @@ def to_one_hot(s, ascii_steps, alphabet):
     one_hot[np.arange(ascii_steps),seq] = 1
     return one_hot
 
+def combine_image_matrixes(original, expansion):
+    if len(original) == 0:
+        original.append(expansion)
+    else:
+        additional_length = len(expansion[0])
+        original = np.vstack(original)
+        original_length = len(original[0])
+        mod_arr = np.empty([len(original), original_length + additional_length], dtype = np.float32)
+        for i in range(len(original)):
+            mod_arr[i] = np.append(original[i], [0]* additional_length)
+        original = mod_arr
+        mod_arr = np.empty([len(expansion), original_length + additional_length], dtype = np.float32)
+        for i in range(len(expansion)):
+            mod_arr[i] = np.append([0] * original_length, expansion[i])
+        expansion = mod_arr
+        original = np.append(original, expansion, axis = 0)
+    return original
+
 # abstraction for logging
 class Logger():
     def __init__(self, args):
