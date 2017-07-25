@@ -65,7 +65,7 @@ def train_model(args):
 
 	logger.write("building model...")
 	model = Model(args, logger=logger)
-
+	
 	logger.write("attempt to load saved model...")
 	load_was_success, global_step = model.try_load_model(args.save_path)
 
@@ -118,6 +118,9 @@ def train_model(args):
 			end = time.time()
 			if i % 10 is 0: logger.write("{}/{}, loss = {:.3f}, regloss = {:.5f}, valid_loss = {:.3f}, time = {:.3f}" \
 				.format(i, args.nepochs * args.nbatches, train_loss, running_average, valid_loss, end - start) )
+
+	writer = tf.summary.FileWriter(args.log_dir + "/graphLog")
+	writer.add_graph(model.sess.graph)
 
 def sample_model(args, logger=None):
 	if args.text == '':

@@ -185,6 +185,8 @@ class DataLoader():
         self.valid_stroke_data = []
         self.valid_ascii_data = []
         counter = 0
+        charcounter = [0] * len(self.alphabet)
+
 
         # every 1 in 20 (5%) will be used for validation data
         cur_data_counter = 0
@@ -199,6 +201,8 @@ class DataLoader():
                 data = np.minimum(data, self.limit)
                 data = np.maximum(data, -self.limit)
                 data = np.array(data,dtype=np.float32)
+                for j in range(self.ascii_steps):
+                    charcounter[self.alphabet.find(self.raw_ascii_data[i][j])]+=1
 
                 # Divides the x and y of each point by the data_scale (By default = 50)
                 data[:,0:2] /= self.data_scale
@@ -211,6 +215,8 @@ class DataLoader():
                 else:
                     self.stroke_data.append(data)
                     self.ascii_data.append(self.raw_ascii_data[i])
+        charactersUsed = {self.alphabet[i]:charcounter[i] for i in range(len(charcounter))}
+        print(charactersUsed)
 
 
         # Divides the number of lines to be studied by the batch_size (Default = 32) to make batches
