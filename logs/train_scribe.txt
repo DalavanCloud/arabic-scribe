@@ -4,7 +4,7 @@ Scribe: Realistic Handriting in Tensorflow
 
 
 TRAINING MODE...
-Namespace(alphabet='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', batch_size=32, bias=1.0, data_dir='./data', data_scale=50, decay=0.95, dropout=0.85, grad_clip=10.0, kmixtures=1, learning_rate=0.0001, log_dir='./logs/', lr_decay=1.0, momentum=0.9, nbatches=500, nepochs=250, nmixtures=8, optimizer='rmsprop', rnn_size=100, save_every=500, save_path='saved/model.ckpt', sleep_time=300, style=-1, text='', train=True, tsteps=360, tsteps_per_ascii=24)
+Namespace(alphabet='"!?.,#[]:@$%^&*()-_+-/\\<>\';|0123456789`~abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', batch_size=32, bias=1.0, data_dir='./data', data_scale=50, decay=0.95, dropout=0.85, grad_clip=10.0, kmixtures=1, learning_rate=0.0001, log_dir='./logs/', lr_decay=1.0, momentum=0.9, nbatches=500, nepochs=250, nmixtures=8, optimizer='rmsprop', rnn_size=100, save_every=500, save_path='saved/model.ckpt', sleep_time=300, style=-1, text='', train=True, tsteps=360, tsteps_per_ascii=24)
 
 loading data...
 	loaded dataset:
@@ -12,58 +12,4 @@ loading data...
 		558 valid individual data points
 		331 batches
 building model...
-	using alphabetabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
-attempt to load saved model...
-loaded model: saved/model.ckpt-124500
-training...
-learning rate: 9.99999974738e-05
-124510/125000, loss = -2.223, regloss = -0.23637, valid_loss = -1.998, time = 0.972
-124520/125000, loss = -2.237, regloss = -0.42387, valid_loss = -2.025, time = 0.688
-124530/125000, loss = -2.298, regloss = -0.59420, valid_loss = -2.011, time = 0.686
-124540/125000, loss = -2.043, regloss = -0.74871, valid_loss = -1.978, time = 0.692
-124550/125000, loss = -2.265, regloss = -0.88412, valid_loss = -2.014, time = 0.691
-124560/125000, loss = -2.252, regloss = -1.00691, valid_loss = -2.018, time = 0.687
-124570/125000, loss = -2.172, regloss = -1.12120, valid_loss = -1.986, time = 0.691
-124580/125000, loss = -2.148, regloss = -1.22508, valid_loss = -2.024, time = 0.993
-124590/125000, loss = -2.278, regloss = -1.31630, valid_loss = -2.017, time = 0.687
-124600/125000, loss = -2.345, regloss = -1.40149, valid_loss = -1.992, time = 0.689
-124610/125000, loss = -2.197, regloss = -1.47656, valid_loss = -2.011, time = 1.197
-124620/125000, loss = -1.986, regloss = -1.54378, valid_loss = -2.010, time = 0.859
-124630/125000, loss = -2.286, regloss = -1.61188, valid_loss = -1.995, time = 0.702
-124640/125000, loss = -2.332, regloss = -1.67009, valid_loss = -2.008, time = 0.831
-124650/125000, loss = -2.197, regloss = -1.72502, valid_loss = -2.025, time = 0.690
-124660/125000, loss = -2.280, regloss = -1.77632, valid_loss = -1.997, time = 1.197
-124670/125000, loss = -2.140, regloss = -1.81681, valid_loss = -2.026, time = 0.703
-124680/125000, loss = -2.194, regloss = -1.85759, valid_loss = -2.014, time = 0.699
-124690/125000, loss = -2.250, regloss = -1.89619, valid_loss = -1.996, time = 0.703
-124700/125000, loss = -2.190, regloss = -1.93050, valid_loss = -2.022, time = 0.986
-124710/125000, loss = -2.160, regloss = -1.95893, valid_loss = -2.015, time = 1.029
-124720/125000, loss = -1.991, regloss = -1.98074, valid_loss = -1.995, time = 0.754
-124730/125000, loss = -2.240, regloss = -2.00516, valid_loss = -2.013, time = 0.706
-124740/125000, loss = -2.190, regloss = -2.02212, valid_loss = -2.019, time = 0.947
-124750/125000, loss = -2.290, regloss = -2.03707, valid_loss = -1.991, time = 0.755
-124760/125000, loss = -2.271, regloss = -2.05241, valid_loss = -2.016, time = 0.722
-124770/125000, loss = -2.320, regloss = -2.06548, valid_loss = -2.012, time = 0.717
-124780/125000, loss = -2.174, regloss = -2.07526, valid_loss = -2.001, time = 1.075
-124790/125000, loss = -2.245, regloss = -2.08477, valid_loss = -2.025, time = 0.682
-124800/125000, loss = -2.126, regloss = -2.09936, valid_loss = -2.012, time = 1.172
-124810/125000, loss = -2.096, regloss = -2.10782, valid_loss = -1.998, time = 0.692
-124820/125000, loss = -2.326, regloss = -2.11267, valid_loss = -2.021, time = 0.693
-124830/125000, loss = -2.263, regloss = -2.12673, valid_loss = -2.016, time = 0.699
-124840/125000, loss = -2.201, regloss = -2.13610, valid_loss = -2.003, time = 1.006
-124850/125000, loss = -2.339, regloss = -2.14827, valid_loss = -2.029, time = 0.704
-124860/125000, loss = -2.052, regloss = -2.15031, valid_loss = -2.014, time = 0.691
-124870/125000, loss = -2.273, regloss = -2.15340, valid_loss = -2.003, time = 1.132
-124880/125000, loss = -2.196, regloss = -2.16047, valid_loss = -2.016, time = 0.692
-124890/125000, loss = -2.252, regloss = -2.16327, valid_loss = -2.004, time = 0.691
-124900/125000, loss = -2.179, regloss = -2.16651, valid_loss = -1.997, time = 0.699
-124910/125000, loss = -2.246, regloss = -2.17314, valid_loss = -2.019, time = 0.748
-124920/125000, loss = -2.363, regloss = -2.17845, valid_loss = -2.021, time = 0.985
-124930/125000, loss = -2.152, regloss = -2.18091, valid_loss = -1.994, time = 0.768
-124940/125000, loss = -2.266, regloss = -2.17977, valid_loss = -1.988, time = 1.211
-124950/125000, loss = -2.245, regloss = -2.18123, valid_loss = -2.020, time = 0.873
-124960/125000, loss = -2.203, regloss = -2.18549, valid_loss = -2.005, time = 0.693
-124970/125000, loss = -2.148, regloss = -2.18863, valid_loss = -2.027, time = 0.980
-124980/125000, loss = -2.434, regloss = -2.19266, valid_loss = -2.019, time = 1.011
-124990/125000, loss = -2.347, regloss = -2.19349, valid_loss = -2.005, time = 0.698
-SAVED MODEL
+	using alphabet"!?.,#[]:@$%^&*()-_+-/\<>';|0123456789`~abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ

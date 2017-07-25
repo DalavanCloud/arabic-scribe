@@ -4,6 +4,34 @@ import cPickle as pickle
 
 from utils import *
 
+CHARACTER_WEIGHT_MAP = {
+    'a' : 28, #bad
+    'b' : 28,
+    'c' : 20,
+    'd' : 34, #bad if it is starting
+    'e' : 24,
+    'f' : 34,
+    'g' : 45,
+    'h' : 24,
+    'i' : 12,  #bad
+    'k' : 30,  #bad at bias 5, acceptable at bias 3
+    'l' : 8,
+    'm' : 36,
+    'n' : 24,
+    'o' : 24,
+    'p' : 28,
+    'q' : 45,  #very very bad at bias 5, acceptable at bias 3
+    'r' : 20,
+    's' : 27,  #prints e at bias 5, alternates between e & s at bias 3
+    't' : 22,
+    'u' : 21,
+    'v' : 16,
+    'w' : 30,
+    'x' : 24, # worst.... number is a guess.
+    'y' : 32,
+    'z' : 25, # worst.... number is a guess.
+}
+
 def sample_gaussian2d(mu1, mu2, s1, s2, rho):
     mean = [mu1, mu2]
     cov = [[s1*s1, rho*s1*s2], [rho*s1*s2, s2*s2]]
@@ -14,7 +42,7 @@ def get_style_states(model, args):
     c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
     h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
     if args.style is -1: return [c0, c1, c2, h0, h1, h2] #model 'chooses' random style
-
+    # Don't let it reach down here.
     with open(os.path.join(args.data_dir, 'styles.p'),'r') as f:
         style_strokes, style_strings = pickle.load(f)
 
@@ -42,7 +70,7 @@ def sample(input_text, model, args):
     [c0, c1, c2, h0, h1, h2] = get_style_states(model, args) # get numpy zeros states for all three LSTMs
     kappa = np.zeros((1, args.kmixtures, 1))   # attention mechanism's read head should start at index 0
     prev_x = np.asarray([[[0, 0, 1]]], dtype=np.float32)     # start with a pen stroke at (0,0)
-    args.tsteps = args.tsteps_per_ascii * len(input_text);
+    args.tsteps = calculate_sample_steps(input_text);
     strokes, pis, windows, phis, kappas = [], [], [], [], [] # the data we're going to generate will go here
 
     finished = False ; i = 0
@@ -62,7 +90,6 @@ def sample(input_text, model, args):
         pi_hat *= 1 + args.bias # apply bias
         pi = np.zeros_like(pi_hat) # need to preallocate
         pi[0] = np.exp(pi_hat[0]) / np.sum(np.exp(pi_hat[0]), axis=0) # softmax
-        
         # choose a component from the MDN
         idx = np.random.choice(pi.shape[1], p=pi[0])
 	eos = 1 if 0.35 < eos[0][0] else 0 # use 0.5 as arbitrary boundary
@@ -157,3 +184,13 @@ def line_plot(strokes, title, figsize = (20,2), save_path='.'):
     plt.gca().invert_yaxis()
     plt.savefig(save_path)
     plt.clf() ; plt.cla()
+def calculate_sample_steps(s):
+    final_weight = 0
+    for i in range(len(s)):
+        if CHARACTER_WEIGHT_MAP.has_key(s[i]):
+            final_weight += CHARACTER_WEIGHT_MAP[s[i]]
+        else:
+            final_weight += 40
+    final_weight += random.randint(0,15)
+    return final_weight
+

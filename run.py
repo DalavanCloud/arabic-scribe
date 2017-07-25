@@ -156,6 +156,7 @@ def sample_model(args, logger=None):
 				kappas.append(kappas_temp)
 				prev_x = mod_strokes[:,0].max() + random.uniform(2,5)
 			windows = np.vstack(windows)	
+			phis = np.vstack(phis)
 			kappas = np.vstack(kappas)
 			strokes = np.vstack(strokes)
 			w_save_path = '{}figures/iter-{}-w-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))

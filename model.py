@@ -221,7 +221,7 @@ class Model():
 		flat_target_data = tf.reshape(self.target_data,[-1, 3])
 		# Each array will contain ?,1
 		[x1_data, x2_data, eos_data] = tf.split(flat_target_data, 3, 1) #we might as well split these now
-
+		# two mu & two sigma because we are using bernolli to detect eos & bivariante to predict next point.
 		[self.eos, self.pi, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho] = get_mdn_coef(output)
 
 		loss = get_loss(self.pi, x1_data, x2_data, eos_data, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho, self.eos)

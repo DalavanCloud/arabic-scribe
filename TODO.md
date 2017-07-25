@@ -5,8 +5,7 @@ UTILS :
 
 SAMPLE :
 =======
-1. Sample lines with spaces.
-2. Adjust tsteps_per_ascii by the characters in the string sample dynamically.
+1. Adjust tsteps_per_ascii by the characters in the string sample dynamically to get right results.
 
 PROJECT :
 =======

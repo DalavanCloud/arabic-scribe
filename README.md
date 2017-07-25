@@ -11,7 +11,9 @@ Changes to optimize and pretrained model:
 5. Sampling calculates tsteps from the length of the passed character.
 6. Our own pretrained model on these changes and real life samples.
 7. Correcting some links from original project readme.
-8. More details about next trials in TODO.md
+8. Sampling lines with spaces.
+9. More details about next trials in TODO.md.
+10. Naive implementation of dynamic sampling input tsteps calculation.
 
 Samples
 --------

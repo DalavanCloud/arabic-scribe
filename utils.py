@@ -176,6 +176,15 @@ class DataLoader():
             average += len(self.raw_stroke_data[i]) / len(self.raw_ascii_data[i].replace(" ",""))
         average = average / len(self.raw_stroke_data)
         return average
+    def getLettersCount(self, data):
+        dictionaryLetters = {}
+        number = [0] * (len(self.alphabet) + 1)
+        for i in range(len(data)):
+            for j in range(len(data[i])):
+                number[self.alphabet.find(data[i][j]) + 1] += 1
+        dictionaryLetters = {self.alphabet[i] : number[i + 1] for i in range(len(self.alphabet))}
+        dictionaryLetters.update({'Unknown' : number[0]})
+        print dictionaryLetters
     # Needs optimizing, Does the first preprocessing steps and saves the file , then opens it again in load_preprocessed, does more preprocessing over here
     # without saving the data which is not optimized.
     def load_preprocessed(self, data_file):
@@ -190,8 +199,6 @@ class DataLoader():
         self.ascii_data = []
         self.valid_stroke_data = []
         self.valid_ascii_data = []
-        counter = 0
-
         # every 1 in 20 (5%) will be used for validation data
         cur_data_counter = 0
         # print(self.calculate_average())
@@ -218,7 +225,6 @@ class DataLoader():
                 else:
                     self.stroke_data.append(data)
                     self.ascii_data.append(ascii)
-
 
         # Divides the number of lines to be studied by the batch_size (Default = 32) to make batches
         self.num_batches = int(len(self.stroke_data) / self.batch_size)
@@ -288,7 +294,7 @@ class DataLoader():
         f.close()
 
     def load_pointer(self):
-        f = open(pointer_path, "rb")
+        f = open(self.pointer_path, "rb")
         [self.pointer] = pickle.load(f)
         f.close()
 
@@ -300,7 +306,7 @@ class DataLoader():
         f.close()
 
     def load_idx(self):
-        f = open(idx_path, "rb")
+        f = open(self.idx_path, "rb")
         [self.idx_perm] = pickle.load(f)
         f.close()
 
