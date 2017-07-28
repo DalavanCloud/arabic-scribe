@@ -14,6 +14,7 @@ Changes to optimize and pretrained model:
 8. Sampling lines with spaces.
 9. More details about next trials in TODO.md.
 10. Naive implementation of dynamic sampling input tsteps calculation.
+11. Validation mode added to ouput the sampling result of all the validation set.
 
 Samples
 --------

@@ -3,13 +3,15 @@ Scribe: Realistic Handriting in Tensorflow
 
 
 
-TRAINING MODE...
-Namespace(alphabet='"!?.,#[]:@$%^&*()-_+-/\\<>\';|0123456789`~abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', batch_size=32, bias=1.0, data_dir='./data', data_scale=50, decay=0.95, dropout=0.85, grad_clip=10.0, kmixtures=1, learning_rate=0.0001, log_dir='./logs/', lr_decay=1.0, momentum=0.9, nbatches=500, nepochs=250, nmixtures=8, optimizer='rmsprop', rnn_size=100, save_every=500, save_path='saved/model.ckpt', sleep_time=300, style=-1, text='', train=True, tsteps=360, tsteps_per_ascii=24)
-
+Validation MODE...
 loading data...
 	loaded dataset:
 		10615 train individual data points
 		558 valid individual data points
 		331 batches
+Sampling 1 validation data
+
+SAMPLING MODE...
+loading data...
 building model...
-	using alphabet"!?.,#[]:@$%^&*()-_+-/\<>';|0123456789`~abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+	using alphabetabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ

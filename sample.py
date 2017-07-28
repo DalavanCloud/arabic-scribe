@@ -72,7 +72,6 @@ def sample(input_text, model, args):
     prev_x = np.asarray([[[0, 0, 1]]], dtype=np.float32)     # start with a pen stroke at (0,0)
     tsteps = calculate_sample_steps(input_text);
     strokes, pis, windows, phis, kappas = [], [], [], [], [] # the data we're going to generate will go here
-
     finished = False ; i = 0
     while not finished:
         feed = {model.input_data: prev_x, model.char_seq: one_hot, model.init_kappa: kappa, \

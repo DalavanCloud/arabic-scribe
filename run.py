@@ -16,6 +16,7 @@ def main():
 	#general model params
 	parser.add_argument('--train', dest='train', action='store_true', help='train the model')
 	parser.add_argument('--sample', dest='train', action='store_false', help='sample from the model')
+	parser.add_argument('--validation', dest='validation', action='store_true', help='validation generation from the model')
 	parser.add_argument('--rnn_size', type=int, default=100, help='size of RNN hidden state')
 	parser.add_argument('--tsteps', type=int, default=150, help='RNN time steps (for backprop)')
 	parser.add_argument('--nmixtures', type=int, default=8, help='number of gaussian mixtures')
@@ -42,6 +43,7 @@ def main():
 	#book-keeping
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
 	parser.add_argument('--log_dir', type=str, default='./logs/', help='location, relative to execution, of log files')
+	parser.add_argument('--valid_dir', type=str, default='./valid/', help='location, relative to execution, of validation output files')
 	parser.add_argument('--data_dir', type=str, default='./data', help='location, relative to execution, of data')
 	parser.add_argument('--save_path', type=str, default='saved/model.ckpt', help='location to save model')
 	parser.add_argument('--save_every', type=int, default=500, help='number of batches between each save')
@@ -51,10 +53,16 @@ def main():
 	parser.add_argument('--style', type=int, default=-1, help='optionally condition model on a preset style (using data in styles.p)')
 	parser.add_argument('--bias', type=float, default=1.0, help='higher bias means neater, lower means more diverse (range is 0-5)')
 	parser.add_argument('--sleep_time', type=int, default=60*5, help='time to sleep between running sampler')
-	parser.set_defaults(train=True)
-	args = parser.parse_args()
+	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
 
-	train_model(args) if args.train else sample_model(args)
+	parser.set_defaults(repeat=False)
+	parser.set_defaults(train=True)
+	parser.set_defaults(validation=False)
+	args = parser.parse_args()
+	if (args.validation):
+		validation_run(args)
+	else:
+		train_model(args) if args.train else sample_model(args)
 
 def train_model(args):
 	logger = Logger(args) # make logging utility
@@ -123,7 +131,7 @@ def train_model(args):
 	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
 	data_loader.save_pointer()
 
-def sample_model(args, logger=None):
+def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 	if args.text == '':
 		strings = ['call me ishmael some years ago', 'A project by Sam Greydanus', 'mmm mmm mmm mmm mmm mmm mmm', \
 			'What I cannot create I do not understand', 'You know nothing Jon Snow'] # test strings
@@ -132,13 +140,20 @@ def sample_model(args, logger=None):
 
 	logger = Logger(args) if logger is None else logger # instantiate logger, if None
 	logger.write("\nSAMPLING MODE...")
-	logger.write("loading data...")
-	
-	logger.write("building model...")
-	model = Model(args, logger)
 
-	logger.write("attempt to load saved model...")
-	load_was_success, global_step = model.try_load_model(args.save_path)
+	if (model is None):
+		logger.write("building model...")
+		model = Model(args, logger)
+
+		logger.write("attempt to load saved model...")
+		load_was_success, global_step = model.try_load_model(args.save_path)
+	else:
+		model = model
+		load_was_success, global_step = model.try_load_model(args.save_path)
+	if (save_path is None):
+		save_path = args.log_dir
+	else:
+		save_path = save_path
 
 	if load_was_success:
 		for s in strings:
@@ -159,21 +174,46 @@ def sample_model(args, logger=None):
 			phis = np.vstack(phis)
 			kappas = np.vstack(kappas)
 			strokes = np.vstack(strokes)
-			w_save_path = '{}figures/iter-{}-w-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))
-			g_save_path = '{}figures/iter-{}-g-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))
-			l_save_path = '{}figures/iter-{}-l-{}'.format(args.log_dir, global_step, s[:10].replace(' ', '_'))
-			window_plots(phis, windows, save_path=w_save_path)
-			gauss_plot(strokes, 'Heatmap for "{}"'.format(s), figsize = (2*len(s),4), save_path=g_save_path)
+			w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			if (add_info):
+				window_plots(phis, windows, save_path=w_save_path)
+				gauss_plot(strokes, 'Heatmap for "{}"'.format(s), figsize = (2*len(s),4), save_path=g_save_path)
+				logger.write( "kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
 			line_plot(strokes, 'Line plot for "{}"'.format(s), figsize = (len(s),2), save_path=l_save_path)
-			# make sure that kappas are reasonable
-			logger.write( "kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
+			
 	else:
 		logger.write("load failed, sampling canceled")
 
-	if True:
+	if args.repeat:
 		tf.reset_default_graph()
 		time.sleep(args.sleep_time)
-		sample_model(args, logger=logger)
+		sample_model(args, logger=logger, model=model)
+
+def validation_run(args, logger=None):
+	args.train = False
+	args.repeat = False
+	logger = Logger(args) if logger is None else logger # instantiate logger, if None
+	logger.write("\nValidation MODE...")
+	logger.write("loading data...")
+	data_loader = DataLoader(args, logger=logger)
+	logger.write("building model...")
+	model = Model(args, logger)
+	logger.write("attempt to load saved model...")
+	load_was_success, global_step = model.try_load_model(args.save_path)
+	if (load_was_success):
+		logger.write("Load successfull...")
+		for i in range(len(data_loader.valid_ascii_data)):
+			logger.write("Sampling {} validation data".format(i + 1))
+			args.text = data_loader.valid_ascii_data[i]
+			sample_model(args, logger, add_info=False, model=model, save_path = args.valid_dir)
+			f = open("{}ascii/{}.txt".format(args.valid_dir, args.text[:10].replace(' ', '_')), 'w')
+			f.write(args.text)
+			f.close()
+	else:
+		logger.write("No saved model.....Validating cancelled !")
+
 
 if __name__ == '__main__':
 	main()

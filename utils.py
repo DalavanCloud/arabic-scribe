@@ -221,7 +221,7 @@ class DataLoader():
                 # Takes one of every 20 xml files and adds them to the validation set
                 if cur_data_counter % 20 == 0:
                   self.valid_stroke_data.append(data)
-                  self.valid_ascii_data.append(ascii)
+                  self.valid_ascii_data.append(self.raw_ascii_data[i].replace("\r", ""))
                 else:
                     self.stroke_data.append(data)
                     self.ascii_data.append(ascii)
