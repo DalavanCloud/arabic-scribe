@@ -4,34 +4,6 @@ import cPickle as pickle
 
 from utils import *
 
-CHARACTER_WEIGHT_MAP = {
-    'a' : 28, #bad
-    'b' : 28,
-    'c' : 20,
-    'd' : 34, #bad if it is starting
-    'e' : 24,
-    'f' : 34,
-    'g' : 45,
-    'h' : 24,
-    'i' : 12,  #bad
-    'k' : 30,  #bad at bias 5, acceptable at bias 3
-    'l' : 8,
-    'm' : 36,
-    'n' : 24,
-    'o' : 24,
-    'p' : 28,
-    'q' : 45,  #very very bad at bias 5, acceptable at bias 3
-    'r' : 20,
-    's' : 27,  #prints e at bias 5, alternates between e & s at bias 3
-    't' : 22,
-    'u' : 21,
-    'v' : 16,
-    'w' : 30,
-    'x' : 24, # worst.... number is a guess.
-    'y' : 32,
-    'z' : 25, # worst.... number is a guess.
-}
-
 def sample_gaussian2d(mu1, mu2, s1, s2, rho):
     mean = [mu1, mu2]
     cov = [[s1*s1, rho*s1*s2], [rho*s1*s2, s2*s2]]
@@ -70,7 +42,6 @@ def sample(input_text, model, args):
     [c0, c1, c2, h0, h1, h2] = get_style_states(model, args) # get numpy zeros states for all three LSTMs
     kappa = np.zeros((1, args.kmixtures, 1))   # attention mechanism's read head should start at index 0
     prev_x = np.asarray([[[0, 0, 1]]], dtype=np.float32)     # start with a pen stroke at (0,0)
-    tsteps = calculate_sample_steps(input_text);
     strokes, pis, windows, phis, kappas = [], [], [], [], [] # the data we're going to generate will go here
     finished = False ; i = 0
     while not finished:
@@ -100,12 +71,8 @@ def sample(input_text, model, args):
         kappas.append(kappa[0].T)
         pis.append(pi[0])
         strokes.append([mu1[0][idx], mu2[0][idx], sigma1[0][idx], sigma2[0][idx], rho[0][idx], eos])
-        
         # test if finished (has the read head seen the whole ascii sequence?)
-        # main_kappa_idx = np.where(alpha[0]==np.max(alpha[0]));
-        # finished = True if kappa[0][main_kappa_idx] > len(input_text) else False
-        finished = True if i > tsteps else False
-        
+        finished = True if kappa[0][0] > len(input_text) else False
         # new input is previous output
         prev_x[0][0] = np.array([x1, x2, eos], dtype=np.float32)
         i+=1
