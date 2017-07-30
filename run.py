@@ -19,16 +19,16 @@ def main():
 	parser.add_argument('--train', dest='train', action='store_true', help='train the model')
 	parser.add_argument('--sample', dest='train', action='store_false', help='sample from the model')
 	parser.add_argument('--validation', dest='validation', action='store_true', help='validation generation from the model')
-	parser.add_argument('--rnn_size', type=int, default=100, help='size of RNN hidden state')
-	parser.add_argument('--tsteps', type=int, default=150, help='RNN time steps (for backprop)')
-	parser.add_argument('--nmixtures', type=int, default=8, help='number of gaussian mixtures')
+	parser.add_argument('--rnn_size', type=int, default=400, help='size of RNN hidden state')
+	parser.add_argument('--tsteps', type=int, default=360, help='RNN time steps (for backprop)')
+	parser.add_argument('--nmixtures', type=int, default=20, help='number of gaussian mixtures')
 
 	# window params
-	parser.add_argument('--kmixtures', type=int, default=1, help='number of gaussian mixtures for character window')
+	parser.add_argument('--kmixtures', type=int, default=10, help='number of gaussian mixtures for character window')
 	parser.add_argument('--alphabet', type=str, default='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', \
 						help='default is a-z, A-Z and <UNK> tag')
 	parser.add_argument('--filter', type=str, default=' \r\t\n', help='remove this from ascii before training')
-	parser.add_argument('--tsteps_per_ascii', type=int, default=25, help='expected number of pen points per character')
+	parser.add_argument('--tsteps_per_ascii', type=int, default=24, help='expected number of pen points per character')
 
 	# training params
 	parser.add_argument('--batch_size', type=int, default=32, help='batch size for each gradient step')

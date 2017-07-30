@@ -230,7 +230,6 @@ class DataLoader():
                   self.valid_ascii_data.append(ascii)
                 else:
                     self.stroke_data.append(data)
-                    print(ascii)
                     self.ascii_data.append(ascii)
 
         # Divides the number of lines to be studied by the batch_size (Default = 32) to make batches
