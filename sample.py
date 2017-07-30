@@ -72,7 +72,8 @@ def sample(input_text, model, args):
         pis.append(pi[0])
         strokes.append([mu1[0][idx], mu2[0][idx], sigma1[0][idx], sigma2[0][idx], rho[0][idx], eos])
         # test if finished (has the read head seen the whole ascii sequence?)
-        finished = True if kappa[0][0] > len(input_text) and alpha[0][0] > 1 else False
+        finished = True if (kappa[0][0] > len(input_text) and alpha[0][0] > 1) \
+            or kappa[0][0] > len(input_text) + 1 else False
         # new input is previous output
         prev_x[0][0] = np.array([x1, x2, eos], dtype=np.float32)
         i+=1
@@ -135,7 +136,7 @@ def gauss_plot(strokes, title, figsize = (20,2), save_path='.'):
     plt.clf() ; plt.cla()
 
 # plots the stroke data (handwriting!)
-def line_plot(strokes, title, figsize = (20,2), save_path='.'):
+def line_plot(strokes, title, figsize = (20,2), save_path='.', add_info=True):
     import matplotlib as mpl
     mpl.use('Agg')
     import matplotlib.pyplot as plt
@@ -146,8 +147,11 @@ def line_plot(strokes, title, figsize = (20,2), save_path='.'):
         start = eos_preds[i]+1
         stop = eos_preds[i+1]
         plt.plot(strokes[start:stop,0], strokes[start:stop,1],'b-', linewidth=2.0) #draw a stroke
-    plt.title(title,  fontsize=20)
     plt.gca().invert_yaxis()
+    if (add_info):
+        plt.title(title,  fontsize=20)
+    else:
+        plt.axis('off')
     plt.savefig(save_path)
     plt.clf() ; plt.cla()
 def calculate_sample_steps(s):

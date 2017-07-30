@@ -5,6 +5,8 @@ import argparse
 import time
 import os
 import random
+import requests
+import base64
 
 from model import Model
 from utils import *
@@ -24,7 +26,8 @@ def main():
 	# window params
 	parser.add_argument('--kmixtures', type=int, default=1, help='number of gaussian mixtures for character window')
 	parser.add_argument('--alphabet', type=str, default='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', \
-						help='default is a-z, A-Z, space, and <UNK> tag')
+						help='default is a-z, A-Z and <UNK> tag')
+	parser.add_argument('--filter', type=str, default=' \r\t\n', help='remove this from ascii before training')
 	parser.add_argument('--tsteps_per_ascii', type=int, default=25, help='expected number of pen points per character')
 
 	# training params
@@ -181,7 +184,7 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 				window_plots(phis, windows, save_path=w_save_path)
 				gauss_plot(strokes, 'Heatmap for "{}"'.format(s), figsize = (2*len(s),4), save_path=g_save_path)
 				logger.write( "kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
-			line_plot(strokes, 'Line plot for "{}"'.format(s), figsize = (len(s),2), save_path=l_save_path)
+			line_plot(strokes, 'Line plot for "{}"'.format(s), figsize = (len(s),2), save_path=l_save_path, add_info=add_info)
 			
 	else:
 		logger.write("load failed, sampling canceled")
@@ -208,6 +211,8 @@ def validation_run(args, logger=None):
 			logger.write("Sampling {} validation data".format(i + 1))
 			args.text = data_loader.valid_ascii_data[i]
 			sample_model(args, logger, add_info=False, model=model, save_path = args.valid_dir)
+			logger.write("Finished sampling ...")
+			logger.write("Saving ascii representation for sample {}".format(i + 1))
 			f = open("{}ascii/{}.txt".format(args.valid_dir, args.text[:10].replace(' ', '_')), 'w')
 			f.write(args.text)
 			f.close()

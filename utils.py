@@ -4,6 +4,7 @@ import random
 import os
 import cPickle as pickle
 import xml.etree.ElementTree as ET
+import re
 
 from utils import *
 
@@ -16,6 +17,7 @@ class DataLoader():
         self.data_scale = args.data_scale # scale data down by this factor
         self.ascii_steps = args.tsteps/args.tsteps_per_ascii
         self.logger = logger
+        self.filter = args.filter
         self.limit = limit # removes large noisy gaps in the data
         self.idx_path = os.path.join(self.data_dir, "idx.cpkl");
         self.pointer_path = os.path.join(self.data_dir, "pointer.cpkl")
@@ -201,10 +203,13 @@ class DataLoader():
         self.valid_ascii_data = []
         # every 1 in 20 (5%) will be used for validation data
         cur_data_counter = 0
+        validationRegex = re.compile(r"[^ "+ self.alphabet +"]")
         # print(self.calculate_average())
         for i in range(len(self.raw_stroke_data)):
             data = self.raw_stroke_data[i]
-            ascii = self.raw_ascii_data[i].replace(" ","")
+            ascii = self.raw_ascii_data[i]
+            for char in self.filter:
+    			ascii = ascii.replace(char,"")
             # Checks if number of points > tsteps + 2 then they are valid, else ignore
             if len(data) > (self.tsteps+2) and len(ascii) > self.ascii_steps:
                 # removes large gaps from the data
@@ -221,9 +226,11 @@ class DataLoader():
                 # Takes one of every 20 xml files and adds them to the validation set
                 if cur_data_counter % 20 == 0:
                   self.valid_stroke_data.append(data)
-                  self.valid_ascii_data.append(self.raw_ascii_data[i].replace("\r", ""))
+                  ascii = validationRegex.sub("", self.raw_ascii_data[i])
+                  self.valid_ascii_data.append(ascii)
                 else:
                     self.stroke_data.append(data)
+                    print(ascii)
                     self.ascii_data.append(ascii)
 
         # Divides the number of lines to be studied by the batch_size (Default = 32) to make batches
