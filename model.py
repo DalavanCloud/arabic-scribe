@@ -38,7 +38,6 @@ class Model():
 		self.char_vec_len = len(self.alphabet) + 1 #plus one for <UNK> token # Alphabets small 26 + Alphabet caps 26 + space + UKN Token
 		self.ascii_steps = args.tsteps/args.tsteps_per_ascii
 
-
 		# ----- build the basic recurrent network architecture
 		# Creates 3 cells, each containing rnn_size (Default = 100) hidden unit (Basically 100 neuron OR sigmoid)
 		cell_func = tf.contrib.rnn.LSTMCell # could be GRUCell or RNNCell
@@ -153,14 +152,13 @@ class Model():
 		self.new_kappa = new_kappa
 		self.alpha = alpha
 
-
-	# ----- finish building LSTMs 2 and 3
+		# ----- finish building LSTMs 2 and 3
 		# Connects output of cell 0 as initial cell 1 to input of cell 1
 		outs_cell1, self.fstate_cell1 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell0, self.istate_cell1, self.cell1, loop_function=None, scope='cell1')
 		# Connects output of cell 1 as inital cell 2 to input of cell 2
 		outs_cell2, self.fstate_cell2 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell1, self.istate_cell2, self.cell2, loop_function=None, scope='cell2')
 
-	# ----- start building the Mixture Density Network on top (start with a dense layer to predict the MDN params)
+		# ----- start building the Mixture Density Network on top (start with a dense layer to predict the MDN params)
 		n_out = 1 + self.nmixtures * 6 # params = end_of_stroke + 6 parameters per Gaussian
 		with tf.variable_scope('mdn_dense'):
 			mdn_w = tf.get_variable("output_w", [self.rnn_size, n_out], initializer=self.graves_initializer)
@@ -228,20 +226,20 @@ class Model():
 		self.cost = loss / (self.batch_size * self.tsteps)
 
 		# ----- bring together all variables and prepare for training
+		
 		self.learning_rate = tf.Variable(0.0, trainable=False)
 		self.decay = tf.Variable(0.0, trainable=False)
 		self.momentum = tf.Variable(0.0, trainable=False)
-
-		tvars = tf.trainable_variables()
-		grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), self.grad_clip)
-
-		if args.optimizer == 'adam':
-			self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-		elif args.optimizer == 'rmsprop':
-			self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
-		else:
-			raise ValueError("Optimizer type not recognized")
-		self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
+		with tf.device('/cpu:0'):
+			tvars = tf.trainable_variables()
+			grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), self.grad_clip)
+			if args.optimizer == 'adam':
+				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+			elif args.optimizer == 'rmsprop':
+				self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
+			else:
+				raise ValueError("Optimizer type not recognized")
+			self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
 
 		# ----- some TensorFlow I/O
 		self.sess = tf.InteractiveSession()
