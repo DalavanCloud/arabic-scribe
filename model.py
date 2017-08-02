@@ -225,23 +225,39 @@ class Model():
 		loss = get_loss(self.pi, x1_data, x2_data, eos_data, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho, self.eos)
 		self.cost = loss / (self.batch_size * self.tsteps)
 
+
 		# ----- bring together all variables and prepare for training
 		
 		self.learning_rate = tf.Variable(0.0, trainable=False)
 		self.decay = tf.Variable(0.0, trainable=False)
 		self.momentum = tf.Variable(0.0, trainable=False)
+		tvars = tf.trainable_variables()
+		print("Half Gradient ONLY on CPU test")
 		with tf.device('/cpu:0'):
-			tvars = tf.trainable_variables()
-			grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars), self.grad_clip)
-			if args.optimizer == 'adam':
-				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-			elif args.optimizer == 'rmsprop':
-				self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
-			else:
-				raise ValueError("Optimizer type not recognized")
-			self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
+			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
+			print(testGradient1)
+
+
+		print("2nd Half of the gradients on the GPU")
+		testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
+		print(testGradient2)
+		testGradient = testGradient1+testGradient2
+		print(testGradient)
+
+		print("Back to GPU")
+		grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
+		if args.optimizer == 'adam':
+			self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+		elif args.optimizer == 'rmsprop':
+			self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
+		else:
+			raise ValueError("Optimizer type not recognized")
+		self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
 
 		# ----- some TensorFlow I/O
+		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
+		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
+
 		self.sess = tf.InteractiveSession()
 		self.saver = tf.train.Saver(tf.global_variables())
 		self.sess.run(tf.global_variables_initializer())
