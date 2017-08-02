@@ -1,3 +1,7 @@
+MODEL:
+======
+1. Create an array and loop through it to generate some of the derivatives on the cpu and some on the gpu
+
 UTILS :
 =======
 1. load_preprocessed optimization --> Saves the valid and strokes data set. 
