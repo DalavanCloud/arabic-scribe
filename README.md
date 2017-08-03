@@ -2,19 +2,10 @@ Scribe: Realistic Handwriting in Tensorflow
 =======
 See [original project](https://github.com/greydanus/scribe)
 
-Changes to optimize and pretrained model:
------------------------------------------
-1. Remove spaces from ascii before training.
-2. Saves permutation to only reset it after it only completed on it.
-3. Changes to the tsteps and tsteps_per_ascii so we take 15 characters with each one taking 24.
-4. Save permutation to a file to load from if we didn't finish and load pointer too.
-5. Sampling calculates tsteps from the length of the passed character.
-6. Our own pretrained model on these changes and real life samples.
-7. Correcting some links from original project readme.
-8. Sampling lines with spaces.
-9. More details about next trials in TODO.md.
-10. Naive implementation of dynamic sampling input tsteps calculation.
-11. Validation mode added to ouput the sampling result of all the validation set.
+Changes to optimize graves:
+---------------------------
+1. Run half the derivatives on the CPU and the other half on the GPU. (Any other ratios breaks it)
+2. Time reduced from 10 seconds on CPU to 3 seconds on GPU
 
 Samples
 --------
