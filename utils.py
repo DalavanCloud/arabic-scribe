@@ -1,3 +1,5 @@
+import codecs
+
 import numpy as np
 import math
 import random
@@ -46,6 +48,7 @@ class DataLoader():
         rootDir = stroke_dir
         for dirName, subdirList, fileList in os.walk(rootDir):
             for fname in fileList:
+                #print(dirName+"/"+fname)
                 filelist.append(dirName+"/"+fname)
         # Continues the code after convert_stroke_to_array
 
@@ -161,8 +164,8 @@ class DataLoader():
                 if len(ascii) > 10:
                     strokes.append(stroke)
                     asciis.append(ascii)
-                else:
-                    self.logger.write("\tline length was too short. line was: " + ascii)
+                #else:
+                    #self.logger.write("\tline length was too short. line was: " + ascii)
 
         #Makes sure that the number of lines (Strokes) is equal to the number of lines in the ascii       
         assert(len(strokes)==len(asciis)), "There should be a 1:1 correspondence between stroke data and ascii labels."
@@ -366,4 +369,4 @@ class Logger():
         if print_it:
             print s
         with open(self.logf, 'a') as f:
-            f.write(s + "\n")
+            f.write(s.encode("UTF-8") + "\n")

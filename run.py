@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 import tensorflow as tf
 
@@ -25,9 +26,9 @@ def main():
 
 	# window params
 	parser.add_argument('--kmixtures', type=int, default=1, help='number of gaussian mixtures for character window')
-	parser.add_argument('--alphabet', type=str, default='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', \
+	parser.add_argument('--alphabet', type=unicode, default="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", \
 						help='default is a-z, A-Z and <UNK> tag')
-	parser.add_argument('--filter', type=str, default=' \r\t\n', help='remove this from ascii before training')
+	parser.add_argument('--filter', type=str, default=u' \r\t\n', help='remove this from ascii before training')
 	parser.add_argument('--tsteps_per_ascii', type=int, default=25, help='expected number of pen points per character')
 
 	# training params

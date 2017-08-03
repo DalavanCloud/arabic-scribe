@@ -33,7 +33,7 @@ class Model():
 		self.graves_initializer = tf.truncated_normal_initializer(mean=0., stddev=.075, seed=None, dtype=tf.float32)
 		self.window_b_initializer = tf.truncated_normal_initializer(mean=-3.0, stddev=.25, seed=None, dtype=tf.float32) # hacky initialization
 
-		self.logger.write('\tusing alphabet{}'.format(self.alphabet))
+		self.logger.write(u'\tusing alphabet{}'.format(self.alphabet))
 		# UNK Token means Unknown token, for all the words not in the vocabularly, example names
 		self.char_vec_len = len(self.alphabet) + 1 #plus one for <UNK> token # Alphabets small 26 + Alphabet caps 26 + space + UKN Token
 		self.ascii_steps = args.tsteps/args.tsteps_per_ascii
