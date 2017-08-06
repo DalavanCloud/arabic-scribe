@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-
+import arabic_reshaper
 import codecs
-
 import numpy as np
 import math
 import random
@@ -14,6 +15,7 @@ class DataLoader():
     def __init__(self, args, logger, limit = 500):
         self.data_dir = args.data_dir
         self.alphabet = args.alphabet
+        self.unknowntoken = args.unknowntoken
         self.batch_size = args.batch_size
         self.tsteps = args.tsteps
         self.data_scale = args.data_scale # scale data down by this factor
@@ -29,86 +31,78 @@ class DataLoader():
 
         if not (os.path.exists(data_file)) :
             self.logger.write("\tcreating training data cpkl file from raw source")
+
             self.preprocess(stroke_dir, ascii_dir, data_file)
 
         self.load_preprocessed(data_file)
         self.reset_batch_pointer()
 
-    def preprocess(self, stroke_dir, ascii_dir, data_file):
-        # create data file from raw xml files from iam handwriting source.
-        self.logger.write("\tparsing dataset...")
-        
-        # build the list of xml files
-        filelist = []
-        # Set the directory you want to start from
-        # ./data/lineStrokes
-        # ./data/ascii
 
-        # loops through the directory using os.walk and adds all paths to the filelist array
-        rootDir = stroke_dir
-        for dirName, subdirList, fileList in os.walk(rootDir):
-            for fname in fileList:
-                #print(dirName+"/"+fname)
-                filelist.append(dirName+"/"+fname)
-        # Continues the code after convert_stroke_to_array
+    def preprocess(self, stroke_dir, ascii_dir, data_file):
+
 
         # function to read each individual xml file
         def getStrokes(filename):
             # Each XML File represents an entire line in the form
             # Uses an XML Parser that creates a tree of the xml file
+
             tree = ET.parse(filename)
+            pointslist = []
+            results = []
             root = tree.getroot()
-
-            result = []
-
-            x_offset = 1e20
-            y_offset = 1e20
-
-            # In the XML file loops through the "<WhiteboardDescription>" which stores the bounding box of the input
-            # then it goes ahead and gets the minimum x and minimum y to use it later on
-
-            for i in range(1, 4):
-                x_offset = min(x_offset, float(root[0][i].attrib['x']))
-                y_offset = min(y_offset, float(root[0][i].attrib['y']))
+            x_offset = -1e20
+            y_offset = -1e20
+            for child in root:
+                if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
+                    points = child.text.split(",")
+                    for point in points:
+                        x, y = point.split(" ")
+                        x_offset = max(x_offset, float(x))
+                        y_offset = max(y_offset, float(y))
+                        pointslist.append([float(x), float(y)])
+                    results.append(pointslist)
 
             # Createss a padding
-            x_offset -= 100
-            y_offset -= 100
+            x_offset += 100.0
+            y_offset += 100.0
 
-
-            # Finds the "Stroke" tag
-            for stroke in root[1].findall('Stroke'):
-                points = []
-                # Loops through the Points tags
-                for point in stroke.findall('Point'):
-                    # Adds the points relative to the 0,0 [So text is consistent]
-                    points.append([float(point.attrib['x'])-x_offset,float(point.attrib['y'])-y_offset])
-                result.append(points)
+            for i in range(0, len(results)):
+                for j in range(0, len(results[i])):
+                    results[i][j] = [results[i][j][0] - x_offset, results[i][j][1] - y_offset]
 
             # result is basically a 2D array each outer array represents a Stroke and each inner array represents a stroke
             # result[0][0] represents the first point in the first stroke
             # after that passes the result to convert_stokes_to_array
-            return result
 
-        
+            return results
+
         # function to read each individual xml file
-        def getAscii(filename, line_number):
-            # Gets the CSR ascii content
-            with open(filename, "r") as f:
-                s = f.read()
-            s = s[s.find("CSR"):]
-            if len(s.split("\n")) > line_number+2:
-                s = s.split("\n")[line_number+2]
-                return s
+        def getUnicode(filename,unknowntoken):
+            # Gets the Word as Unicode
+            indexs = []
+            tree = ET.parse(filename)
+            root = tree.getroot()
+            shapedUnicode = root[2][0][0][0].get('value')
+            unshapedUnicode = arabic_reshaper.reshape(shapedUnicode)
+            if(len(shapedUnicode)!= len(unshapedUnicode)):
+                chars = list(unshapedUnicode)
+                for index, char in enumerate(chars):
+                    if (not unknowntoken.__contains__(char)):
+                        indexs.append(index)
             else:
-                return ""
-                
+                return unshapedUnicode
+
+            for index in indexs:
+                unshapedUnicode = unshapedUnicode[:index] + shapedUnicode[index] + unshapedUnicode[index:]
+            return unshapedUnicode
+
+
         # converts a list of arrays into a 2d numpy int16 array
         def convert_stroke_to_array(stroke):
             n_point = 0
             for i in range(len(stroke)):
                 n_point += len(stroke[i])
-            #Creates a numpy matrix of n columns and 3 rows
+            # Creates a numpy matrix of n columns and 3 rows
             stroke_data = np.zeros((n_point, 3), dtype=np.int16)
 
             prev_x = 0
@@ -133,47 +127,63 @@ class DataLoader():
                     stroke_data[counter, 2] = 0
 
                     # If there is no point after it then [counter,2] is a 1 flagging it as the end of the stroke
-                    if (k == (len(stroke[j])-1)): # end of stroke
+                    if (k == (len(stroke[j]) - 1)):  # end of stroke
                         stroke_data[counter, 2] = 1
                     counter += 1
             return stroke_data
 
+
+        # create data file from raw xml files from iam handwriting source.
+        self.logger.write("\tparsing dataset...")
+        
+        # build the list of xml files
+        strokeslist = []
+        unicodelist = []
+        # Set the directory you want to start from
+        # ./data/lineStrokes
+        # ./data/ascii
+
+        # loops through the directory using os.walk and adds all paths to the strokeslist array
+        rootDir = self.data_dir
+        strokeslist = []
+        unicodelist = []
+        for dirName, subdirList, fileList in os.walk(rootDir):
+            for fname in fileList:
+                if (fname.__contains__("inkml")):
+                    strokeslist.append(dirName + "/" + fname)
+                elif fname.__contains__("upx"):
+                    unicodelist.append(dirName + "/" + fname)
+        unicodelist.sort()
+        strokeslist.sort()
+        # Continues the code after convert_stroke_to_array
+
+
         # build stroke database of every xml file inside iam database
         strokes = []
-        asciis = []
-        for i in range(len(filelist)):
-            if (filelist[i][-3:] == 'xml'):  # Checks the extension of the file if its xml then it means that it contains strokes and points
-                stroke_file = filelist[i]
+        unicodes = []
+        for i in range(len(strokeslist)):
+            stroke_file = strokeslist[i]
+            unicode_file = unicodelist[i]
 #                 print 'processing '+stroke_file
-                stroke = convert_stroke_to_array(getStrokes(stroke_file)) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
+            stroke = convert_stroke_to_array(getStrokes(stroke_file)) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
 
-                #Gets the corresponding ascii file for the lineStroke xml
-                #Changes the directory name from lineStrokes to ascii and removes some of the subfolder paths that aren't needed
-                ascii_file = stroke_file.replace("lineStrokes","ascii")[:-7] + ".txt"
+            
+            unicode = getUnicode(unicode_file,self.unknowntoken) # Calls the unicode line of each respective line
 
-                # Gets the line_number depending on the line number in the stroke_file name
-                # Example: a01-000u-01.xml , gets the 01 at the end to represent the line number
-                line_number = stroke_file[-6:-4]
-
-                # Removes one from the line_number (So index starts from 0)
-                line_number = int(line_number) - 1
-                ascii = getAscii(ascii_file, line_number) # Calls the ascii line of each respective line
-                # Checks the length of the line, if its greater than 10 characters then it is okay.
-                # Assumption : First commit had default tsteps of 250 , and since ascii = tsteps/tsteps_per_ascii 250/25 = 10
-                # Why 10?
-                if len(ascii) > 10:
-                    strokes.append(stroke)
-                    asciis.append(ascii)
-                #else:
-                    #self.logger.write("\tline length was too short. line was: " + ascii)
+            strokes.append(stroke)
+            unicodes.append(unicode)
+            #else:
+                #self.logger.write("\tline length was too short. line was: " + ascii)
 
         #Makes sure that the number of lines (Strokes) is equal to the number of lines in the ascii       
-        assert(len(strokes)==len(asciis)), "There should be a 1:1 correspondence between stroke data and ascii labels."
+        assert(len(strokes)==len(unicodes)), "There should be a 1:1 correspondence between stroke data and ascii labels."
         # Saves the preprocessed data as strokes_training_data.cpkl (protocol 2 stores hexa)
         f = open(data_file,"wb")
-        pickle.dump([strokes,asciis], f, protocol=2)
+        pickle.dump([strokes,unicodes], f, protocol=2)
         f.close()
         self.logger.write("\tfinished parsing dataset. saved {} lines".format(len(strokes)))
+
+
 
     def calculate_average(self):
         average = 0
@@ -181,6 +191,7 @@ class DataLoader():
             average += len(self.raw_stroke_data[i]) / len(self.raw_ascii_data[i].replace(" ",""))
         average = average / len(self.raw_stroke_data)
         return average
+
     def getLettersCount(self, data):
         dictionaryLetters = {}
         number = [0] * (len(self.alphabet) + 1)
@@ -192,6 +203,7 @@ class DataLoader():
         print dictionaryLetters
     # Needs optimizing, Does the first preprocessing steps and saves the file , then opens it again in load_preprocessed, does more preprocessing over here
     # without saving the data which is not optimized.
+
     def load_preprocessed(self, data_file):
         # Opens strokes_training_data.cpkl
         f = open(data_file,"rb")
