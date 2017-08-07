@@ -1,0 +1,14 @@
+{
+  "name": "scribe-demo",
+  "version": "1.0.0",
+  "description": "Our demo for the handwriting synthesis that generates arabic & english handwriting",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Amr & KGhandour",
+  "license": "ISC",
+  "dependencies": {
+    "python-shell": "^0.4.0"
+  }
+}
