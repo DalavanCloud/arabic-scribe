@@ -71,9 +71,10 @@ def sample(input_text, model, args):
         kappas.append(kappa[0].T)
         pis.append(pi[0])
         strokes.append([mu1[0][idx], mu2[0][idx], sigma1[0][idx], sigma2[0][idx], rho[0][idx], eos])
+        main_kappa_idx = np.where(alpha[0]==np.max(alpha[0]))[0];
         # test if finished (has the read head seen the whole ascii sequence?)
-        finished = True if (kappa[0][0] > len(input_text) and alpha[0][0] > 1) \
-            or kappa[0][0] > len(input_text) + 1 else False
+        finished = True if (kappa[0][main_kappa_idx] > len(input_text) and alpha[0][main_kappa_idx] > 1) \
+            or kappa[0][main_kappa_idx] > len(input_text) + 1 else False
         # new input is previous output
         prev_x[0][0] = np.array([x1, x2, eos], dtype=np.float32)
         i+=1

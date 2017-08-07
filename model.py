@@ -232,19 +232,15 @@ class Model():
 		self.decay = tf.Variable(0.0, trainable=False)
 		self.momentum = tf.Variable(0.0, trainable=False)
 		tvars = tf.trainable_variables()
-		print("Half Gradient ONLY on CPU test")
+		logger.write("Half Gradient ONLY on CPU test")
 		with tf.device('/cpu:0'):
-			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
-			print(testGradient1)
+			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 
-
-		print("2nd Half of the gradients on the GPU")
-		testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
-		print(testGradient2)
+		logger.write("2nd Half of the gradients on the GPU")
+		testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 		testGradient = testGradient1+testGradient2
-		print(testGradient)
-
-		print("Back to GPU")
+		
+		logger.write("Back to GPU")
 		grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
 		if args.optimizer == 'adam':
 			self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
