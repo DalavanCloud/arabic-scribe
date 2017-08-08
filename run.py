@@ -57,15 +57,17 @@ def main():
 	parser.add_argument('--bias', type=float, default=1.0, help='higher bias means neater, lower means more diverse (range is 0-5)')
 	parser.add_argument('--sleep_time', type=int, default=60*5, help='time to sleep between running sampler')
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
+	parser.add_argument('--no_info', dest='add_info', action='store_false', help='adds additional info')
 
 	parser.set_defaults(repeat=False)
+	parser.set_defaults(add_info=True)
 	parser.set_defaults(train=True)
 	parser.set_defaults(validation=False)
 	args = parser.parse_args()
 	if (args.validation):
 		validation_run(args)
 	else:
-		train_model(args) if args.train else sample_model(args)
+		train_model(args) if args.train else sample_model(args, add_info=args.add_info)
 
 def train_model(args):
 	logger = Logger(args) # make logging utility
@@ -177,9 +179,12 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 			phis = np.vstack(phis)
 			kappas = np.vstack(kappas)
 			strokes = np.vstack(strokes)
-			w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-			g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-			l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			if (add_info):
+				w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+				g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+				l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			else:
+				l_save_path = '{}figures/{}.png'.format(save_path, s)
 			if (add_info):
 				window_plots(phis, windows, save_path=w_save_path)
 				gauss_plot(strokes, 'Heatmap for "{}"'.format(s), figsize = (2*len(s),4), save_path=g_save_path)

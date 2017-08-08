@@ -9,6 +9,9 @@
   "author": "Amr & KGhandour",
   "license": "ISC",
   "dependencies": {
+    "body-parser": "^1.17.2",
+    "express": "^4.15.4",
+    "fs": "0.0.1-security",
     "python-shell": "^0.4.0"
   }
 }

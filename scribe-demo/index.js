@@ -1,37 +1,38 @@
-var myPythonScriptPath = 'run.py';
+const PythonShell = require('python-shell')
+const express = require('express')
+const bodyParser = require('body-parser')
+const fs = require('fs')
+const app = express()
 
-// Use python shell
-var PythonShell = require('python-shell');
-
-console.log("Please Input a String")
-var stdin = process.openStdin();
-stdin.addListener("data",function(d){
-	d = d.tostring().replace('\n', '');
+// Tell express to use the body-parser middleware and to not parse extended bodies
+app.use(bodyParser.json())
+ 
+// Route that receives a POST request to /sms
+app.post('/handwritingDL', function (req, res) {
+	const body = req.body
 	var options = {
-		mode : 'text',
-		pythonPath: '/usr/bin/python2.7',
-		scriptPath: __dirname + '/../',
-		args: ['--sample',' --text ' + "'" + d + "'"]
-	}
-	console.log(options.scriptPath)
-	// var pyshell = new PythonShell(myPythonScriptPath);
-	PythonShell.run(myPythonScriptPath,options,function(err){
-		if(err)throw err;
+        mode: 'text',
+        scriptPath: '../',
+        args: ['--sample', '--text', body.text ,'--save_path', '../saved/model.ckpt', '--bias', body.bias, '--style', body.style, '--data_dir', '../data', '--no_info']
+	};
+	var pyShell = new PythonShell('run.py',options, function(err){
+	        if(err) throw err;
+	});
+	pyShell.end(function(err){
+		var filePath = './logs/figures/'+body.text+'.png';
+		var img = fs.readFileSync(filePath);
+		res.writeHead(200, {'Content-Type': 'image/png' });
+		res.end(img, 'binary');
+		fs.unlinkSync(filePath);
 	});
 	
-	// pyshell.on('message', function (message) {
-
-	//     // received a message sent from the Python script (a simple "print" statement)
-	//     console.log(message);
-	// });
-
-// end the input stream and allow the process to exit
-	// pyshell.end(function (err) {
-	//     if (err){
-	//         throw err;
-	//     };
-
-	//     console.log('finished');
-	// });
-});
-
+})
+ 
+// Tell our app to listen on port 3000
+app.listen(3000, function (err) {
+  if (err) {
+    throw err
+  }
+ 
+  console.log('Server started on port 3000')
+})

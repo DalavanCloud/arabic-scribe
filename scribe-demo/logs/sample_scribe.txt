@@ -1,0 +1,13 @@
+Scribe: Realistic Handriting in Tensorflow
+     by Sam Greydanus
+
+
+
+SAMPLING MODE...
+building model...
+	using alphabetabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+Half Gradient ONLY on CPU test
+2nd Half of the gradients on the GPU
+Back to GPU
+attempt to load saved model...
+loaded model: ../saved/model.ckpt-51000
