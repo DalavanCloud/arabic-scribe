@@ -14,7 +14,7 @@ from utils import *
 from sample import *
 
 
-shapedArabicAlphabet = u'\uFE80'+u'\uFE81'+u'\uFE82'+u'\uFE83'+u'\uFE84'+u'\uFE85'+u'\uFE86'+u'\uFE87'+u'\uFE88'+u'\uFE89'+u'\uFE8A'+u'\uFE8B'+u'\uFE8C'+u'\uFE8D'+u'\uFE8E'+u'\uFE8F'+u'\uFE90'+u'\uFE91'+u'\uFE92'+u'\uFE93'+u'\uFE94'+u'\uFE95'+u'\uFE96'+u'\uFE97'+u'\uFE98'+u'\uFE99'+u'\uFE9A'+u'\uFE9B'+u'\uFE9C'+u'\uFE9D'+u'\uFE9E'+u'\uFE9F'+u'\uFEA0'+u'\uFEA1'+u'\uFEA2'+u'\uFEA3'+u'\uFEA4'+u'\uFEA5'+u'\uFEA6'+u'\uFEA7'+u'\uFEA8'+u'\uFEA9'+u'\uFEAA'+u'\uFEAB'+u'\uFEAC'+u'\uFEAD'+u'\uFEAE'+u'\uFEAF'+u'\uFEB0'+u'\uFEB1'+u'\uFEB2'+u'\uFEB3'+u'\uFEB4'+u'\uFEB5'+u'\uFEB6'+u'\uFEB7'+u'\uFEB8'+u'\uFEB9'+u'\uFEBA'+u'\uFEBB'+u'\uFEBC'+u'\uFEBD'+u'\uFEBE'+u'\uFEBF'+u'\uFEC0'+u'\uFEC1'+u'\uFEC2'+u'\uFEC3'+u'\uFEC4'+u'\uFEC5'+u'\uFEC6'+u'\uFEC7'+u'\uFEC8'+u'\uFEC9'+u'\uFECA'+u'\uFECB'+u'\uFECC'+u'\uFECD'+u'\uFECE'+u'\uFECF'+u'\uFED0'+u'\uFED1'+u'\uFED2'+u'\uFED3'+u'\uFED4'+u'\uFED5'+u'\uFED6'+u'\uFED7'+u'\uFED8'+u'\uFED9'+u'\uFEDA'+u'\uFEDB'+u'\uFEDC'+u'\uFEDD'+u'\uFEDE'+u'\uFEDF'+u'\uFEE0'+u'\uFEE1'+u'\uFEE2'+u'\uFEE3'+u'\uFEE4'+u'\uFEE5'+u'\uFEE6'+u'\uFEE7'+u'\uFEE8'+u'\uFEE9'+u'\uFEEA'+u'\uFEEB'+u'\uFEEC'+u'\uFEED'+u'\uFEEE'+u'\uFEEF'+u'\uFEF0'+u'\uFEF1'+u'\uFEF2'+u'\uFEF3'+u'\uFEF4'
+shapedArabicAlphabet = u'\ufef7' +u'\uFEFC' +u'\uFEFB' +u'\uFEF9' +u'\uFEE7' +u'\uFDF2' +u'\u0651'+u'\uFE80'+u'\uFE81'+u'\uFE82'+u'\uFE83'+u'\uFE84'+u'\uFE85'+u'\uFE86'+u'\uFE87'+u'\uFE88'+u'\uFE89'+u'\uFE8A'+u'\uFE8B'+u'\uFE8C'+u'\uFE8D'+u'\uFE8E'+u'\uFE8F'+u'\uFE90'+u'\uFE91'+u'\uFE92'+u'\uFE93'+u'\uFE94'+u'\uFE95'+u'\uFE96'+u'\uFE97'+u'\uFE98'+u'\uFE99'+u'\uFE9A'+u'\uFE9B'+u'\uFE9C'+u'\uFE9D'+u'\uFE9E'+u'\uFE9F'+u'\uFEA0'+u'\uFEA1'+u'\uFEA2'+u'\uFEA3'+u'\uFEA4'+u'\uFEA5'+u'\uFEA6'+u'\uFEA7'+u'\uFEA8'+u'\uFEA9'+u'\uFEAA'+u'\uFEAB'+u'\uFEAC'+u'\uFEAD'+u'\uFEAE'+u'\uFEAF'+u'\uFEB0'+u'\uFEB1'+u'\uFEB2'+u'\uFEB3'+u'\uFEB4'+u'\uFEB5'+u'\uFEB6'+u'\uFEB7'+u'\uFEB8'+u'\uFEB9'+u'\uFEBA'+u'\uFEBB'+u'\uFEBC'+u'\uFEBD'+u'\uFEBE'+u'\uFEBF'+u'\uFEC0'+u'\uFEC1'+u'\uFEC2'+u'\uFEC3'+u'\uFEC4'+u'\uFEC5'+u'\uFEC6'+u'\uFEC7'+u'\uFEC8'+u'\uFEC9'+u'\uFECA'+u'\uFECB'+u'\uFECC'+u'\uFECD'+u'\uFECE'+u'\uFECF'+u'\uFED0'+u'\uFED1'+u'\uFED2'+u'\uFED3'+u'\uFED4'+u'\uFED5'+u'\uFED6'+u'\uFED7'+u'\uFED8'+u'\uFED9'+u'\uFEDA'+u'\uFEDB'+u'\uFEDC'+u'\uFEDD'+u'\uFEDE'+u'\uFEDF'+u'\uFEE0'+u'\uFEE1'+u'\uFEE2'+u'\uFEE3'+u'\uFEE4'+u'\uFEE5'+u'\uFEE6'+u'\uFEE7'+u'\uFEE8'+u'\uFEE9'+u'\uFEEA'+u'\uFEEB'+u'\uFEEC'+u'\uFEED'+u'\uFEEE'+u'\uFEEF'+u'\uFEF0'+u'\uFEF1'+u'\uFEF2'+u'\uFEF3'+u'\uFEF4'
 unshapedArabicAlphabet = u'\u0621'+u'\u0622'+u'\u0623'+u'\u0624'+u'\u0625'+u'\u0626'+u'\u0627'+u'\u0628'+u'\u0629'+u'\u062A'+u'\u062B'+u'\u062C'+u'\u062D'+u'\u062E'+u'\u062F'+u'\u0630'+u'\u0631'+u'\u0632'+u'\u0633'+u'\u0634'+u'\u0635'+u'\u0636'+u'\u0637'+u'\u0638'+u'\u0639'+u'\u063A'+u'\u0640'+u'\u0641'+u'\u0642'+u'\u0643'+u'\u0644'+u'\u0645'+u'\u0646'+u'\u0647'+u'\u0648'+u'\u0649'+u'\u064A'+u"\u0020"
 
 
@@ -26,7 +26,7 @@ def main():
 	parser.add_argument('--sample', dest='train', action='store_false', help='sample from the model')
 	parser.add_argument('--validation', dest='validation', action='store_true', help='validation generation from the model')
 	parser.add_argument('--rnn_size', type=int, default=100, help='size of RNN hidden state')
-	parser.add_argument('--tsteps', type=int, default=150, help='RNN time steps (for backprop)')
+	parser.add_argument('--tsteps', type=int, default=198, help='RNN time steps (for backprop)')
 	parser.add_argument('--nmixtures', type=int, default=8, help='number of gaussian mixtures')
 
 	# window params
@@ -36,7 +36,7 @@ def main():
 	parser.add_argument('--unknowntoken', type=unicode, default=unshapedArabicAlphabet, \
 						help='default is unshaped unicode of arabic alphabet and any other unicode charcter will be treated as unknown token')
 	parser.add_argument('--filter', type=str, default=u' \r\t\n', help='remove this from ascii before training')
-	parser.add_argument('--tsteps_per_ascii', type=int, default=25, help='expected number of pen points per character')
+	parser.add_argument('--tsteps_per_ascii', type=int, default=33, help='expected number of pen points per character')
 
 	# training params
 	parser.add_argument('--batch_size', type=int, default=32, help='batch size for each gradient step')

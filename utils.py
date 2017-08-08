@@ -50,18 +50,18 @@ class DataLoader():
             pointslist = []
             results = []
             root = tree.getroot()
-            x_offset = -1e20
-            y_offset = -1e20
             for child in root:
+                x_offset = -1e20
+                y_offset = -1e20
+                pointslist = []
                 if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
                     points = child.text.split(",")
                     for point in points:
                         x, y = point.split(" ")
                         x_offset = max(x_offset, float(x))
                         y_offset = max(y_offset, float(y))
-                        pointslist.append([float(x), float(y)])
+                        pointslist.append([x_offset, y_offset])
                     results.append(pointslist)
-
             # Createss a padding
             x_offset += 100.0
             y_offset += 100.0
@@ -165,12 +165,14 @@ class DataLoader():
             stroke_file = strokeslist[i]
             unicode_file = unicodelist[i]
 #                 print 'processing '+stroke_file
-            stroke = convert_stroke_to_array(getStrokes(stroke_file)) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
+            wordStrokes = convert_stroke_to_array(getStrokes(stroke_file)) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
 
             
             unicode = getUnicode(unicode_file,self.unknowntoken) # Calls the unicode line of each respective line
 
-            strokes.append(stroke)
+
+
+            strokes.append(wordStrokes)
             unicodes.append(unicode)
             #else:
                 #self.logger.write("\tline length was too short. line was: " + ascii)
@@ -178,6 +180,7 @@ class DataLoader():
         #Makes sure that the number of lines (Strokes) is equal to the number of lines in the ascii       
         assert(len(strokes)==len(unicodes)), "There should be a 1:1 correspondence between stroke data and ascii labels."
         # Saves the preprocessed data as strokes_training_data.cpkl (protocol 2 stores hexa)
+
         f = open(data_file,"wb")
         pickle.dump([strokes,unicodes], f, protocol=2)
         f.close()
