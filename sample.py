@@ -17,15 +17,14 @@ def get_style_states(model, args):
     # Don't let it reach down here.
     with open(os.path.join(args.data_dir, 'styles.p'),'r') as f:
         style_strokes, style_strings = pickle.load(f)
-
+    validationRegex = re.compile(r"[^ "+ self.alphabet +"]")
     style_strokes, style_string = style_strokes[args.style], style_strings[args.style]
+    style_string = validationRegex.sub("", style_string)
     style_onehot = [to_one_hot(style_string, model.ascii_steps, args.alphabet)]
         
     style_stroke = np.zeros((1, 1, 3), dtype=np.float32)
     style_kappa = np.zeros((1, args.kmixtures, 1))
-    prime_len = 500 # must be <= 700
-    
-    for i in xrange(prime_len):
+    for i in xrange(args.tsteps):
         style_stroke[0][0] = style_strokes[i,:]
         feed = {model.input_data: style_stroke, model.char_seq: style_onehot, model.init_kappa: style_kappa, \
                 model.istate_cell0.c: c0, model.istate_cell1.c: c1, model.istate_cell2.c: c2, \
