@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+<body>
+
+<h1> Front end Demo by DL Team </h1>
+<div ng-app="handwrite" ng-controller="formCtrl">
+  <form novalidate>
+    Text:<br>
+    <input type="text" ng-model="string.text" value="test"><br>
+    Bias:<br>
+    <input type="number" ng-model="string.bias" value = 1><br>
+    Style:<br>
+    <input type="number" ng-model="string.style" value = 1>
+    <br><br>
+    <button ng-click="update()">Go</button>
+  </form>
+  <p>form = {{string}}</p>
+
+</div>
+
+<script>
+var app = angular.module('handwrite', []);
+
+app.controller('formCtrl', function($scope, $http) {
+    $scope.master = {text:"", bias:"", style:""};
+    $scope.update = function() {
+    	console.log($scope.string)
+   		 var stuff = JSON.stringify({'text': $scope.string.text, 'bias': $scope.string.bias, 'style': $scope.string.style})
+    	$http({
+		  method: 'POST',
+		  url: 'http://localhost:3000/handwritingDL',
+		  headers: {'Content-Type': "application/json"},
+		  data: stuff
+			}).then(function successCallback(response) {
+				console.log("Success")
+				console.log(response.data)
+				var b64Response = btoa(encodeURIComponent(response.data));
+				// var b64Response = Base64.encode(response.data)
+				var outputImg = document.createElement('img');
+				outputImg.src = 'data:image/png;base64,'+response.data
+				document.body.appendChild(outputImg);
+		    // this callback will be called asynchronously
+		    // when the response is available
+		  }, function errorCallback(response,header) {
+		  	console.log(response)
+		  	console.log(stuff)
+		  	console.log(header)
+		    // called asynchronously if an error occurs
+		    // or server returns response with an error status.
+		  });
+    };
+    // $scope.update();
+});
+
+</script>
+
+</body>
+</html>

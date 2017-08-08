@@ -2,14 +2,20 @@ const PythonShell = require('python-shell')
 const express = require('express')
 const bodyParser = require('body-parser')
 const fs = require('fs')
+const cors = require('cors')
 const app = express()
+
 
 // Tell express to use the body-parser middleware and to not parse extended bodies
 app.use(bodyParser.json())
+
+//Allow CORS
+app.use(cors())
  
 // Route that receives a POST request to /sms
 app.post('/handwritingDL', function (req, res) {
 	const body = req.body
+	console.log(body)
 	var options = {
         mode: 'text',
         scriptPath: '../',
@@ -21,8 +27,8 @@ app.post('/handwritingDL', function (req, res) {
 	pyShell.end(function(err){
 		var filePath = './logs/figures/'+body.text+'.png';
 		var img = fs.readFileSync(filePath);
-		res.writeHead(200, {'Content-Type': 'image/png' });
-		res.end(img, 'binary');
+		//res.writeHead(200, {'Content-Type': 'application/json' });
+		res.json(new Buffer(img).toString('base64'));
 		fs.unlinkSync(filePath);
 	});
 	
