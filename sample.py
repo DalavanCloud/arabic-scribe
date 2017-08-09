@@ -17,9 +17,9 @@ def get_style_states(model, args):
     # Don't let it reach down here.
     with open(os.path.join(args.data_dir, 'styles.p'),'r') as f:
         style_strokes, style_strings = pickle.load(f)
-    validationRegex = re.compile(r"[^ "+ self.alphabet +"]")
     style_strokes, style_string = style_strokes[args.style], style_strings[args.style]
-    style_string = validationRegex.sub("", style_string)
+    for char in args.filter:
+		style_string = style_string.replace(char,"")
     style_onehot = [to_one_hot(style_string, model.ascii_steps, args.alphabet)]
         
     style_stroke = np.zeros((1, 1, 3), dtype=np.float32)
