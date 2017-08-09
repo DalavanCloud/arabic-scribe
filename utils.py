@@ -340,6 +340,8 @@ class DataLoader():
 # utility function for converting input ascii characters into vectors the network can understand.
 # index position 0 means "unknown"
 def to_one_hot(s, ascii_steps, alphabet):
+
+    s=  arabic_reshaper.reshape(s.decode('UTF-8'))
     steplimit=3e3; s = s[:3e3] if len(s) > 3e3 else s # clip super-long strings
     # Sequence, gets the index of each character in the line
     seq = [alphabet.find(char) + 1 for char in s]
