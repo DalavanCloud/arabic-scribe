@@ -15,15 +15,18 @@
     <br><br>
     <button ng-click="update()">Go</button>
   </form>
-  <img ng-src="{{imgsrc}}">
+  <img ng-src="{{imgsrc}}"><br>
+  <img ng-src="{{gif}}">
 
 </div>
 
 <script>
 var app = angular.module('handwrite', []);
 
-app.controller('formCtrl', function($scope, $http) {
+app.controller('formCtrl', function($scope, $http, $sce) {
     $scope.master = {text:"", bias:"", style:""};
+
+
     $scope.update = function() {
     	console.log($scope.string)
    		 var stuff = JSON.stringify({'text': $scope.string.text, 'bias': $scope.string.bias, 'style': $scope.string.style})
@@ -35,12 +38,8 @@ app.controller('formCtrl', function($scope, $http) {
 			}).then(function successCallback(response) {
 				console.log("Success")
 				console.log(response.data)
-				var b64Response = btoa(encodeURIComponent(response.data));
-				// var b64Response = Base64.encode(response.data)
-				var outputImg = document.createElement('img');
-				outputImg.src = 'data:image/png;base64,'+response.data
 				$scope.imgsrc = 'data:image/png;base64,'+response.data
-				// document.body.appendChild(outputImg);
+				$scope.gif = 'dancing.gif'
 		    // this callback will be called asynchronously
 		    // when the response is available
 		  }, function errorCallback(response,header) {
