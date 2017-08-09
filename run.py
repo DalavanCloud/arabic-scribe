@@ -26,7 +26,7 @@ def main():
 	parser.add_argument('--sample', dest='train', action='store_false', help='sample from the model')
 	parser.add_argument('--validation', dest='validation', action='store_true', help='validation generation from the model')
 	parser.add_argument('--rnn_size', type=int, default=100, help='size of RNN hidden state')
-	parser.add_argument('--tsteps', type=int, default=198, help='RNN time steps (for backprop)')
+	parser.add_argument('--tsteps', type=int, default=231, help='RNN time steps (for backprop)')
 	parser.add_argument('--nmixtures', type=int, default=8, help='number of gaussian mixtures')
 
 	# window params

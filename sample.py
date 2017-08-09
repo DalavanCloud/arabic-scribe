@@ -130,7 +130,7 @@ def gauss_plot(strokes, title, figsize = (20,2), save_path='.'):
             sigmax=strokes[i,2], sigmay=strokes[i,3], sigmaxy=0) # sigmaxy=strokes[i,4] gives error
         Z += gauss/(np.max(gauss) + epsilon)
 
-    plt.title(title.decode('UTF-8'), fontsize=20)
+    plt.title(arabic_reshaper.reshape(title.decode('UTF-8')), fontsize=20)
     plt.imshow(Z)
     plt.savefig(save_path)
     plt.clf() ; plt.cla()
@@ -149,18 +149,19 @@ def line_plot(strokes, title, figsize = (20,2), save_path='.', add_info=True):
         plt.plot(strokes[start:stop,0], strokes[start:stop,1],'b-', linewidth=2.0) #draw a stroke
     plt.gca().invert_yaxis()
     if (add_info):
-        plt.title(title.decode('UTF-8'),  fontsize=20)
+        plt.title(arabic_reshaper.reshape(title.decode('UTF-8')) ,  fontsize=20)
     else:
         plt.axis('off')
     plt.savefig(save_path)
     plt.clf() ; plt.cla()
-def calculate_sample_steps(s):
-    final_weight = 0
-    for i in range(len(s)):
-        if CHARACTER_WEIGHT_MAP.has_key(s[i]):
-            final_weight += CHARACTER_WEIGHT_MAP[s[i]]
-        else:
-            final_weight += 40
-    final_weight += random.randint(6,15)
-    return final_weight
+
+# def calculate_sample_steps(s):
+#     final_weight = 0
+#     for i in range(len(s)):
+#         if CHARACTER_WEIGHT_MAP.has_key(s[i]):
+#             final_weight += CHARACTER_WEIGHT_MAP[s[i]]
+#         else:
+#             final_weight += 40
+#     final_weight += random.randint(6,15)
+#     return final_weight
 

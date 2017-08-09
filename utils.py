@@ -341,10 +341,22 @@ class DataLoader():
 # index position 0 means "unknown"
 def to_one_hot(s, ascii_steps, alphabet):
 
+    alphabet1=alphabet[::-1]
+    # print  alphabet
+    # for i in range(len(alphabet)):
+    #     print alphabet[i],;print ("     "),;print i
     s=  arabic_reshaper.reshape(s.decode('UTF-8'))
+    # print  arabic_reshaper.reshape(s)
     steplimit=3e3; s = s[:3e3] if len(s) > 3e3 else s # clip super-long strings
     # Sequence, gets the index of each character in the line
+    s=s[::-1]
+    # print s
+    s = s[::-1]
+    s=list(s)
     seq = [alphabet.find(char) + 1 for char in s]
+    # print seq
+    # for element in seq:
+    #     print alphabet[element-1]
     # If number of characters > ascii steps (by default tsteps/tsteps_per_ascii (150/25 = 6))
     if len(seq) >= ascii_steps:
         # Trim the characters to limit to 6
@@ -356,6 +368,9 @@ def to_one_hot(s, ascii_steps, alphabet):
     one_hot = np.zeros((ascii_steps,len(alphabet)+1))
     # Sets the value of the corresponding index of the character to 1 Ex. In case of B [ 0 ,0, 1 , 0 .....] (where the first index is empty as a "flag")
     one_hot[np.arange(ascii_steps),seq] = 1
+    # for mat in one_hot:
+    #     print mat
+    #     print "\n"+"\n"
     return one_hot
 
 def combine_image_matrixes(original, expansion):
