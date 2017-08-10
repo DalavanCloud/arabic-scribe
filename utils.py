@@ -9,6 +9,7 @@ import cPickle as pickle
 import xml.etree.ElementTree as ET
 import re
 
+
 from utils import *
 
 class DataLoader():
@@ -262,17 +263,22 @@ class DataLoader():
         cur_data_counter = 0
         validationRegex = re.compile(r"[^ "+ self.alphabet +"]")
         # print(self.calculate_average())
+        # c = 0
         for i in range(len(self.raw_stroke_data)):
             data = self.raw_stroke_data[i]
             ascii = self.raw_ascii_data[i]
             for char in self.filter:
     			ascii = ascii.replace(char,"")
-
             # Checks if number of points > tsteps + 2 then they are valid, else ignore
+
             if len(data) > (self.tsteps+2) and len(ascii) > self.ascii_steps:
                 # removes large gaps from the data
                 # Since points are relative to each other, then if the distance between two consecutive points are large, then that means it is done by mistake
                 # Self.limit = 500 , meaning points can't be further from each other than 500 pixels
+
+                # if(data.all() != np.minimum(data, self.limit).all() or data.all() != np.maximum(data, -self.limit).all()):
+                #     c += 1
+
                 data = np.minimum(data, self.limit)
                 data = np.maximum(data, -self.limit)
                 data = np.array(data,dtype=np.float32)
@@ -290,6 +296,9 @@ class DataLoader():
                     self.stroke_data.append(data)
                     self.ascii_data.append(ascii)
 
+        # print
+        # print " number of noise",; print c
+        print
         if(self.datasetAnalysis):
             self.dataset_analysis()
 
@@ -338,6 +347,7 @@ class DataLoader():
             os.remove(self.idx_path)
             os.remove(self.pointer_path)
             self.reset_batch_pointer()
+
     def reset_batch_pointer(self):
         # Generates an array containing index of Random stroke_data
         if not (os.path.exists(self.idx_path)) :
@@ -351,8 +361,6 @@ class DataLoader():
         else:
             self.load_pointer()
 
-
-            
     def save_pointer(self):
         if(os.path.exists(self.pointer_path)):
             os.remove(self.pointer_path)
@@ -383,27 +391,24 @@ class DataLoader():
 # index position 0 means "unknown"
 def to_one_hot(s, ascii_steps, alphabet):
 
-    alphabet1=alphabet[::-1]
+    # alphabet1=alphabet[::-1]
     # print  alphabet
     # for i in range(len(alphabet)):
     #     print alphabet[i],;print ("     "),;print i
 
-    if(isinstance(s,unicode)):
-        s = arabic_reshaper.reshape(s)
-    else:
-        s = arabic_reshaper.reshape(s.decode('UTF-8'))
+
+    s = arabic_reshaper.reshape(s)
 
 
     # print  arabic_reshaper.reshape(s)
-    steplimit=3e3; s = s[:3e3] if len(s) > 3e3 else s # clip super-long strings
     # Sequence, gets the index of each character in the line
-    s=s[::-1]
-    # print s
-    s = s[::-1]
-    s=list(s)
+
+
+    steplimit=3e3; s = s[:3e3] if len(s) > 3e3 else s # clip super-long strings
     seq = [alphabet.find(char) + 1 for char in s]
     # print seq
     # for element in seq:
+    #     if element == 0: continue
     #     print alphabet[element-1]
     # If number of characters > ascii steps (by default tsteps/tsteps_per_ascii (150/25 = 6))
     if len(seq) >= ascii_steps:

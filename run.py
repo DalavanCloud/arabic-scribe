@@ -150,7 +150,7 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 		strings = ['call me ishmael some years ago', 'A project by Sam Greydanus', 'mmm mmm mmm mmm mmm mmm mmm', \
 			'What I cannot create I do not understand', 'You know nothing Jon Snow'] # test strings
 	else:
-		strings = [args.text]
+		strings = [(args.text).decode('UTF-8')]
 
 	logger = Logger(args) if logger is None else logger # instantiate logger, if None
 	logger.write("\nSAMPLING MODE...")
@@ -188,14 +188,14 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 			phis = np.vstack(phis)
 			kappas = np.vstack(kappas)
 			strokes = np.vstack(strokes)
-			w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-			g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-			l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			w_save_path = u'{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			g_save_path = u'{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			l_save_path = u'{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
 			if (add_info):
 				window_plots(phis, windows, save_path=w_save_path)
-				gauss_plot(strokes, 'Heatmap for "{}"'.format(s), figsize = (2*len(s),4), save_path=g_save_path)
-				logger.write( "kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
-			line_plot(strokes, 'Line plot for "{}"'.format(s), figsize = (len(s),2), save_path=l_save_path, add_info=add_info)
+				gauss_plot(strokes, u'Heatmap for "{}"'.format(s[::-1]), figsize = (2*len(s),4), save_path=g_save_path)
+				logger.write( u"kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
+			line_plot(strokes, u'Line plot for "{}"'.format(s[::-1]), figsize = (len(s),2), save_path=l_save_path, add_info=add_info)
 			
 	else:
 		logger.write("load failed, sampling canceled")
