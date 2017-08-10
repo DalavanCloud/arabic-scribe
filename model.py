@@ -282,7 +282,7 @@ class Model():
 			# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 			# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
 			config = tf.ConfigProto()
-			config.gpu_options.allow_growth = True
+			# config.gpu_options.allow_growth = True
 			config.graph_options.place_pruned_graph = False
 			if(self.dist):
 				self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0], config=config)
