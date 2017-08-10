@@ -1,6 +1,8 @@
 *.pyc
 figures/
-logs/train_scribe.txt
-logs/sample_scribe.txt
 data/ascii/
 data/lineStrokes
+scribe-demo/logs/
+logs/
+saved/
+
