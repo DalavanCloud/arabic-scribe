@@ -345,7 +345,9 @@ def to_one_hot(s, ascii_steps, alphabet):
     # print  alphabet
     # for i in range(len(alphabet)):
     #     print alphabet[i],;print ("     "),;print i
-    s=  arabic_reshaper.reshape(s.decode('UTF-8'))
+
+    s=  arabic_reshaper.reshape(unicode(s))
+
     # print  arabic_reshaper.reshape(s)
     steplimit=3e3; s = s[:3e3] if len(s) > 3e3 else s # clip super-long strings
     # Sequence, gets the index of each character in the line
