@@ -280,8 +280,7 @@ class Model():
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
 		if(self.dist):
-			with tf.Session("grpc://"+self.ps_hosts[0]) as sess:
-				self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0])
+			self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0])
 		else:
 			self.sess = tf.InteractiveSession()
 
