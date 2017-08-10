@@ -251,7 +251,7 @@ class Model():
 			with tf.device('/job:worker/task:0'):
 				logger.write("Half Gradient ONLY on 1 gpu")
 				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
-		else:
+		else:	
 			with tf.device('/cpu:0'):
 				logger.write("Half Gradient ONLY on CPU")
 				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
@@ -279,10 +279,13 @@ class Model():
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
+		config = tf.ConfigProto()
+		config.gpu_options.allow_growth = True
+		config.graph_options.place_pruned_graph = True
 		if(self.dist):
-			self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0])
+			self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0], config=config)
 		else:
-			self.sess = tf.InteractiveSession()
+			self.sess = tf.InteractiveSession(config=config)
 
 		self.saver = tf.train.Saver(tf.global_variables())
 		
