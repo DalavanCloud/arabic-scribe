@@ -248,7 +248,7 @@ class Model():
 		tvars = tf.trainable_variables()
 		
 		if(self.dist):
-			with tf.device('/job:worker/task:1'):
+			with tf.device('/job:worker/task:0'):
 				logger.write("Half Gradient ONLY on 1 gpu")
 				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 		else:
