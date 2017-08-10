@@ -43,6 +43,13 @@ def main():
 	parser.add_argument('--decay', type=float, default=0.95, help='decay rate for rmsprop')
 	parser.add_argument('--momentum', type=float, default=0.9, help='momentum for rmsprop')
 
+	parser.add_argument('--dist', dest='dist',action='store_true',help='distribute?')
+	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+  	parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+  	parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
+  	# Flags for defining the tf.train.Server
+  	parser.add_argument("--task_index",type=int,default=0,help="Index of task within the job")
+
 	#book-keeping
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
 	parser.add_argument('--log_dir', type=str, default='./logs/', help='location, relative to execution, of log files')
@@ -59,10 +66,12 @@ def main():
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
 	parser.add_argument('--no_info', dest='add_info', action='store_false', help='adds additional info')
 
+
 	parser.set_defaults(repeat=False)
 	parser.set_defaults(add_info=True)
 	parser.set_defaults(train=True)
 	parser.set_defaults(validation=False)
+	parser.set_defaults(dist=False)
 	args = parser.parse_args()
 	if (args.validation):
 		validation_run(args)
@@ -93,6 +102,7 @@ def train_model(args):
 	valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
 
 	logger.write("training...")
+	
 	model.sess.run(tf.assign(model.decay, args.decay ))
 	model.sess.run(tf.assign(model.momentum, args.momentum ))
 	running_average = 0.0 ; remember_rate = 0.99

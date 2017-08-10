@@ -29,6 +29,20 @@ class Model():
 		self.tsteps_per_ascii = args.tsteps_per_ascii
 		self.data_dir = args.data_dir
 
+		# model distribution
+		self.dist = args.dist
+		self.ps_hosts = args.ps_hosts.split(",")
+		self.worker_hosts = args.worker_hosts.split(",")
+		self.job_name = args.job_name
+		self.task_index = args.task_index
+
+		# distribution here
+		if(self.dist):
+			cluster = tf.train.ClusterSpec({"ps": self.ps_hosts, "worker": self.worker_hosts})
+			server = tf.train.Server(cluster,job_name=self.job_name,task_index=self.task_index)
+
+
+
 		# Creates an initializer for the model variables
 		self.graves_initializer = tf.truncated_normal_initializer(mean=0., stddev=.075, seed=None, dtype=tf.float32)
 		self.window_b_initializer = tf.truncated_normal_initializer(mean=-3.0, stddev=.25, seed=None, dtype=tf.float32) # hacky initialization
@@ -232,12 +246,24 @@ class Model():
 		self.decay = tf.Variable(0.0, trainable=False)
 		self.momentum = tf.Variable(0.0, trainable=False)
 		tvars = tf.trainable_variables()
-		logger.write("Half Gradient ONLY on CPU test")
-		with tf.device('/cpu:0'):
-			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
+		
+		if(self.dist):
+			with tf.device('/job:worker/task:0'):
+				logger.write("Half Gradient ONLY on 1 gpu")
+				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
+		else:
+			with tf.device('/cpu:0'):
+				logger.write("Half Gradient ONLY on CPU")
+				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 
 		logger.write("2nd Half of the gradients on the GPU")
-		testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
+		if(self.dist):
+			with tf.device('/job:worker/task:1'):
+				testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
+		else:
+			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
+
+
 		testGradient = testGradient1+testGradient2
 		
 		logger.write("Back to GPU")
@@ -253,9 +279,14 @@ class Model():
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
+		if(self.dist):
+			with tf.Session("grpc://"+self.ps_hosts[0]+":2222") as sess:
+				self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0]+":2222")
+		else:
+			self.sess = tf.InteractiveSession()
 
-		self.sess = tf.InteractiveSession()
 		self.saver = tf.train.Saver(tf.global_variables())
+		
 		self.sess.run(tf.global_variables_initializer())
 
 		# ----- for restoring previous models
