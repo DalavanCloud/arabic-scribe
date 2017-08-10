@@ -35,53 +35,52 @@ class Model():
 		self.worker_hosts = args.worker_hosts.split(",")
 		self.job_name = args.job_name
 		self.task_index = args.task_index
-
+		self.device = '/gpu:0'
 		# distribution here
 		if(self.dist):
 			cluster = tf.train.ClusterSpec({"ps": self.ps_hosts, "worker": self.worker_hosts})
 			server = tf.train.Server(cluster,job_name=self.job_name,task_index=self.task_index)
+			self.device = '/job:ps/task:0'
+		with tf.device(self.device):
+			# Creates an initializer for the model variables
+			self.graves_initializer = tf.truncated_normal_initializer(mean=0., stddev=.075, seed=None, dtype=tf.float32)
+			self.window_b_initializer = tf.truncated_normal_initializer(mean=-3.0, stddev=.25, seed=None, dtype=tf.float32) # hacky initialization
+
+			self.logger.write('\tusing alphabet{}'.format(self.alphabet))
+			# UNK Token means Unknown token, for all the words not in the vocabularly, example names
+			self.char_vec_len = len(self.alphabet) + 1 #plus one for <UNK> token # Alphabets small 26 + Alphabet caps 26 + space + UKN Token
+			self.ascii_steps = args.tsteps/args.tsteps_per_ascii
+
+			# ----- build the basic recurrent network architecture
+			# Creates 3 cells, each containing rnn_size (Default = 100) hidden unit (Basically 100 neuron OR sigmoid)
+			cell_func = tf.contrib.rnn.LSTMCell # could be GRUCell or RNNCell
+			self.cell0 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
+			self.cell1 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
+			self.cell2 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
+
+			# Checks the dropout , if 1 then it keeps all the previous data, if 0 then removes it all.
+			# If dropout < 1 then enters the if condition which makes the output_keep_prob = self.dropout (Default = 0.85)
+			if (self.train and self.dropout < 1): # training mode
+				self.cell0 = tf.contrib.rnn.DropoutWrapper(self.cell0, output_keep_prob = self.dropout)
+				self.cell1 = tf.contrib.rnn.DropoutWrapper(self.cell1, output_keep_prob = self.dropout)
+				self.cell2 = tf.contrib.rnn.DropoutWrapper(self.cell2, output_keep_prob = self.dropout)
 
 
+			# Creates input placeholder inorder not to generate an error, with size 1st dimension, not defined, second dimension tsteps, third dimension 3 elements
+			self.input_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
+			# Same as input data
+			self.target_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
+			# 
+			self.istate_cell0 = self.cell0.zero_state(batch_size=self.batch_size, dtype=tf.float32)
+			self.istate_cell1 = self.cell1.zero_state(batch_size=self.batch_size, dtype=tf.float32)
+			self.istate_cell2 = self.cell2.zero_state(batch_size=self.batch_size, dtype=tf.float32)
 
-		# Creates an initializer for the model variables
-		self.graves_initializer = tf.truncated_normal_initializer(mean=0., stddev=.075, seed=None, dtype=tf.float32)
-		self.window_b_initializer = tf.truncated_normal_initializer(mean=-3.0, stddev=.25, seed=None, dtype=tf.float32) # hacky initialization
-
-		self.logger.write('\tusing alphabet{}'.format(self.alphabet))
-		# UNK Token means Unknown token, for all the words not in the vocabularly, example names
-		self.char_vec_len = len(self.alphabet) + 1 #plus one for <UNK> token # Alphabets small 26 + Alphabet caps 26 + space + UKN Token
-		self.ascii_steps = args.tsteps/args.tsteps_per_ascii
-
-		# ----- build the basic recurrent network architecture
-		# Creates 3 cells, each containing rnn_size (Default = 100) hidden unit (Basically 100 neuron OR sigmoid)
-		cell_func = tf.contrib.rnn.LSTMCell # could be GRUCell or RNNCell
-		self.cell0 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
-		self.cell1 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
-		self.cell2 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
-
-		# Checks the dropout , if 1 then it keeps all the previous data, if 0 then removes it all.
-		# If dropout < 1 then enters the if condition which makes the output_keep_prob = self.dropout (Default = 0.85)
-		if (self.train and self.dropout < 1): # training mode
-			self.cell0 = tf.contrib.rnn.DropoutWrapper(self.cell0, output_keep_prob = self.dropout)
-			self.cell1 = tf.contrib.rnn.DropoutWrapper(self.cell1, output_keep_prob = self.dropout)
-			self.cell2 = tf.contrib.rnn.DropoutWrapper(self.cell2, output_keep_prob = self.dropout)
-
-
-		# Creates input placeholder inorder not to generate an error, with size 1st dimension, not defined, second dimension tsteps, third dimension 3 elements
-		self.input_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
-		# Same as input data
-		self.target_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
-		# 
-		self.istate_cell0 = self.cell0.zero_state(batch_size=self.batch_size, dtype=tf.float32)
-		self.istate_cell1 = self.cell1.zero_state(batch_size=self.batch_size, dtype=tf.float32)
-		self.istate_cell2 = self.cell2.zero_state(batch_size=self.batch_size, dtype=tf.float32)
-
-		#slice the input volume into separate vols for each tstep
-		# Divided the tensor placeholder data into 150 individual tensor flow inputs
-		inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(self.input_data, self.tsteps, 1)]		
-		#build cell0 computational graph
-		# Output of cell 0 and next state (final state) of cell 0
-		outs_cell0, self.fstate_cell0 = tf.contrib.legacy_seq2seq.rnn_decoder(inputs, self.istate_cell0, self.cell0, loop_function=None, scope='cell0')
+			#slice the input volume into separate vols for each tstep
+			# Divided the tensor placeholder data into 150 individual tensor flow inputs
+			inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(self.input_data, self.tsteps, 1)]		
+			#build cell0 computational graph
+			# Output of cell 0 and next state (final state) of cell 0
+			outs_cell0, self.fstate_cell0 = tf.contrib.legacy_seq2seq.rnn_decoder(inputs, self.istate_cell0, self.cell0, loop_function=None, scope='cell0')
 
 	# ----- build the gaussian character window
 		def get_window(alpha, beta, kappa, c):
@@ -133,56 +132,57 @@ class Model():
 			kappa = kappa + prev_kappa
 			return alpha, beta, kappa # each ~ [?,kmixtures,1]
 
-		# Default KMixture = 1
-		# Ascii_steps = tsteps / tsteps_per_ascii (Number of ascii chars (Default 150/25 = 6))
-		self.init_kappa = tf.placeholder(dtype=tf.float32, shape=[None, self.kmixtures, 1]) 
-		self.char_seq = tf.placeholder(dtype=tf.float32, shape=[None, self.ascii_steps, self.char_vec_len])
+		with tf.device(self.device):
+			# Default KMixture = 1
+			# Ascii_steps = tsteps / tsteps_per_ascii (Number of ascii chars (Default 150/25 = 6))
+			self.init_kappa = tf.placeholder(dtype=tf.float32, shape=[None, self.kmixtures, 1]) 
+			self.char_seq = tf.placeholder(dtype=tf.float32, shape=[None, self.ascii_steps, self.char_vec_len])
 
-		prev_kappa = self.init_kappa
-		prev_window = self.char_seq[:,0,:]
+			prev_kappa = self.init_kappa
+			prev_window = self.char_seq[:,0,:]
 
-		#add gaussian window result
-		reuse = False
-		for i in range(len(outs_cell0)):
-			[alpha, beta, new_kappa] = get_window_params(i, outs_cell0[i], self.kmixtures, prev_kappa, reuse=reuse)
-			window, phi = get_window(alpha, beta, new_kappa, self.char_seq)
+			#add gaussian window result
+			reuse = False
+			for i in range(len(outs_cell0)):
+				[alpha, beta, new_kappa] = get_window_params(i, outs_cell0[i], self.kmixtures, prev_kappa, reuse=reuse)
+				window, phi = get_window(alpha, beta, new_kappa, self.char_seq)
 
 
-			# Outs_cell0[i] shape ==> 32,100
-			# Window shape ==> 32,54
+				# Outs_cell0[i] shape ==> 32,100
+				# Window shape ==> 32,54
 
-			outs_cell0[i] = tf.concat((outs_cell0[i],window), 1) #concat outputs
-			#Outs_cell0[i] new shape ==> 32,154
-			#Inputs[i] shape ==> ?,3
-			outs_cell0[i] = tf.concat((outs_cell0[i],inputs[i]), 1) #concat input data
-			#Outs_cell0[i] new shape ==> 32,157
+				outs_cell0[i] = tf.concat((outs_cell0[i],window), 1) #concat outputs
+				#Outs_cell0[i] new shape ==> 32,154
+				#Inputs[i] shape ==> ?,3
+				outs_cell0[i] = tf.concat((outs_cell0[i],inputs[i]), 1) #concat input data
+				#Outs_cell0[i] new shape ==> 32,157
 
-			prev_kappa = new_kappa
-			prev_window = window
-			reuse = True
-		#save some attention mechanism params (useful for sampling/debugging later)
-		self.window = window
-		self.phi = phi
-		self.new_kappa = new_kappa
-		self.alpha = alpha
+				prev_kappa = new_kappa
+				prev_window = window
+				reuse = True
+			#save some attention mechanism params (useful for sampling/debugging later)
+			self.window = window
+			self.phi = phi
+			self.new_kappa = new_kappa
+			self.alpha = alpha
 
-		# ----- finish building LSTMs 2 and 3
-		# Connects output of cell 0 as initial cell 1 to input of cell 1
-		outs_cell1, self.fstate_cell1 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell0, self.istate_cell1, self.cell1, loop_function=None, scope='cell1')
-		# Connects output of cell 1 as inital cell 2 to input of cell 2
-		outs_cell2, self.fstate_cell2 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell1, self.istate_cell2, self.cell2, loop_function=None, scope='cell2')
+			# ----- finish building LSTMs 2 and 3
+			# Connects output of cell 0 as initial cell 1 to input of cell 1
+			outs_cell1, self.fstate_cell1 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell0, self.istate_cell1, self.cell1, loop_function=None, scope='cell1')
+			# Connects output of cell 1 as inital cell 2 to input of cell 2
+			outs_cell2, self.fstate_cell2 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell1, self.istate_cell2, self.cell2, loop_function=None, scope='cell2')
 
-		# ----- start building the Mixture Density Network on top (start with a dense layer to predict the MDN params)
-		n_out = 1 + self.nmixtures * 6 # params = end_of_stroke + 6 parameters per Gaussian
-		with tf.variable_scope('mdn_dense'):
-			mdn_w = tf.get_variable("output_w", [self.rnn_size, n_out], initializer=self.graves_initializer)
-			mdn_b = tf.get_variable("output_b", [n_out], initializer=self.graves_initializer)
+			# ----- start building the Mixture Density Network on top (start with a dense layer to predict the MDN params)
+			n_out = 1 + self.nmixtures * 6 # params = end_of_stroke + 6 parameters per Gaussian
+			with tf.variable_scope('mdn_dense'):
+				mdn_w = tf.get_variable("output_w", [self.rnn_size, n_out], initializer=self.graves_initializer)
+				mdn_b = tf.get_variable("output_b", [n_out], initializer=self.graves_initializer)
 
-		#Outs_cell2 ==> t_steps,32,100 (Default = 150,32,100)
-		out_cell2 = tf.reshape(tf.concat(outs_cell2, 1), [-1, args.rnn_size]) #concat outputs for efficiency
-		#Out_cell2 shape ==> 32,15000 Adds all rows together (150 and the rnn_size (Default 100))
-		# Output shape ==> 4800, 49
-		output = tf.nn.xw_plus_b(out_cell2, mdn_w, mdn_b) #data flows through dense nn
+			#Outs_cell2 ==> t_steps,32,100 (Default = 150,32,100)
+			out_cell2 = tf.reshape(tf.concat(outs_cell2, 1), [-1, args.rnn_size]) #concat outputs for efficiency
+			#Out_cell2 shape ==> 32,15000 Adds all rows together (150 and the rnn_size (Default 100))
+			# Output shape ==> 4800, 49
+			output = tf.nn.xw_plus_b(out_cell2, mdn_w, mdn_b) #data flows through dense nn
 
 
 	# ----- build mixture density cap on top of second recurrent cell
@@ -227,25 +227,26 @@ class Model():
 
 			return [eos, pi, mu1, mu2, sigma1, sigma2, rho]
 
-		# reshape target data (as we did the input data)
-		# flat_target_data shape ==> ?,3  
-		# (Most probably tsteps * number of data )
-		flat_target_data = tf.reshape(self.target_data,[-1, 3])
-		# Each array will contain ?,1
-		[x1_data, x2_data, eos_data] = tf.split(flat_target_data, 3, 1) #we might as well split these now
-		# two mu & two sigma because we are using bernolli to detect eos & bivariante to predict next point.
-		[self.eos, self.pi, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho] = get_mdn_coef(output)
+		with tf.device(self.device):
+			# reshape target data (as we did the input data)
+			# flat_target_data shape ==> ?,3  
+			# (Most probably tsteps * number of data )
+			flat_target_data = tf.reshape(self.target_data,[-1, 3])
+			# Each array will contain ?,1
+			[x1_data, x2_data, eos_data] = tf.split(flat_target_data, 3, 1) #we might as well split these now
+			# two mu & two sigma because we are using bernolli to detect eos & bivariante to predict next point.
+			[self.eos, self.pi, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho] = get_mdn_coef(output)
 
-		loss = get_loss(self.pi, x1_data, x2_data, eos_data, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho, self.eos)
-		self.cost = loss / (self.batch_size * self.tsteps)
+			loss = get_loss(self.pi, x1_data, x2_data, eos_data, self.mu1, self.mu2, self.sigma1, self.sigma2, self.rho, self.eos)
+			self.cost = loss / (self.batch_size * self.tsteps)
 
 
-		# ----- bring together all variables and prepare for training
-		
-		self.learning_rate = tf.Variable(0.0, trainable=False)
-		self.decay = tf.Variable(0.0, trainable=False)
-		self.momentum = tf.Variable(0.0, trainable=False)
-		tvars = tf.trainable_variables()
+			# ----- bring together all variables and prepare for training
+			
+			self.learning_rate = tf.Variable(0.0, trainable=False)
+			self.decay = tf.Variable(0.0, trainable=False)
+			self.momentum = tf.Variable(0.0, trainable=False)
+			tvars = tf.trainable_variables()
 		
 		if(self.dist):
 			with tf.device('/job:worker/task:0'):
@@ -261,35 +262,36 @@ class Model():
 		# 	with tf.device('/job:worker/task:1'):
 		# 		testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 		# else:
-		testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
+		with tf.device(self.device):
+			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 
 
-		testGradient = testGradient1+testGradient2
-		
-		logger.write("Back to GPU")
-		grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
-		if args.optimizer == 'adam':
-			self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
-		elif args.optimizer == 'rmsprop':
-			self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
-		else:
-			raise ValueError("Optimizer type not recognized")
-		self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
+			testGradient = testGradient1+testGradient2
+			
+			logger.write("Back to GPU")
+			grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
+			if args.optimizer == 'adam':
+				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+			elif args.optimizer == 'rmsprop':
+				self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
+			else:
+				raise ValueError("Optimizer type not recognized")
+			self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
 
-		# ----- some TensorFlow I/O
-		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
-		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
-		config = tf.ConfigProto()
-		config.gpu_options.allow_growth = True
-		config.graph_options.place_pruned_graph = True
-		if(self.dist):
-			self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0], config=config)
-		else:
-			self.sess = tf.InteractiveSession(config=config)
+			# ----- some TensorFlow I/O
+			# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
+			# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
+			config = tf.ConfigProto()
+			config.gpu_options.allow_growth = True
+			config.graph_options.place_pruned_graph = False
+			if(self.dist):
+				self.sess = tf.InteractiveSession("grpc://"+self.ps_hosts[0], config=config)
+			else:
+				self.sess = tf.InteractiveSession(config=config)
 
-		self.saver = tf.train.Saver(tf.global_variables())
-		
-		self.sess.run(tf.global_variables_initializer())
+			self.saver = tf.train.Saver(tf.global_variables())
+			
+			self.sess.run(tf.global_variables_initializer())
 
 		# ----- for restoring previous models
 	def try_load_model(self, save_path):
