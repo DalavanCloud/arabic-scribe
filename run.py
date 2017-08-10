@@ -50,6 +50,8 @@ def main():
 	parser.add_argument('--lr_decay', type=float, default=1.0, help='decay rate for learning rate')
 	parser.add_argument('--decay', type=float, default=0.95, help='decay rate for rmsprop')
 	parser.add_argument('--momentum', type=float, default=0.9, help='momentum for rmsprop')
+	parser.add_argument('--analysis', dest='datasetAnalysis', action='store_true', help='analyzing dataset with that tarin model')
+
 
 	#book-keeping
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
@@ -69,6 +71,7 @@ def main():
 	parser.set_defaults(repeat=False)
 	parser.set_defaults(train=True)
 	parser.set_defaults(validation=False)
+	parser.set_defaults(datasetAnalysis=False)
 	args = parser.parse_args()
 	if (args.validation):
 		validation_run(args)

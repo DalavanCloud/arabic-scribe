@@ -13,6 +13,7 @@ from utils import *
 
 class DataLoader():
     def __init__(self, args, logger, limit = 500):
+        self.datasetAnalysis = args.datasetAnalysis
         self.data_dir = args.data_dir
         self.alphabet = args.alphabet
         self.unknowntoken = args.unknowntoken
@@ -187,6 +188,39 @@ class DataLoader():
         self.logger.write("\tfinished parsing dataset. saved {} lines".format(len(strokes)))
 
 
+    def dataset_analysis(self):
+
+        dictionaryLetters = []
+        charactersTobeloaded = []
+        longestWord = len(max(self.raw_ascii_data, key=len))
+        for i in range(1, longestWord + 1):
+            dictionaryLetter, counter = self.getLettersCount(self.raw_ascii_data, i)
+            dictionaryLetters.append(dictionaryLetter)
+            s = '{:>20}'.format('{:<10}'.format("For")) + '{:<10}'.format(str(i)) + '{:<20}'.format("character in") \
+                + '{:<10}'.format(str(counter)) + '{:<10}'.format("words") + '{:<10}'.format(str(counter * i)) \
+                + '{:<10}'.format("character will be loaded\n")
+            charactersTobeloaded.append(s)
+
+        dictionary = []
+        for i in range(len(dictionaryLetters)):
+            line = []
+            for letter in dictionaryLetters[i]:
+                line.append('{:>30}'.format('{:<10}'.format("Letter")) + u'{:<10}'.format(letter) \
+                            + '{:<20}'.format("Unicode") + '{:<10}'.format((letter).encode('unicode-escape')) \
+                            + '{:<30}'.format("Number of repetition") + '{:<10}'.format(
+                    str(dictionaryLetters[i][letter])))
+            dictionary.append(line)
+
+        f = open("logs/dataset_Info.txt", "wb")
+        s = "Info of dataset \n\n"
+        f.write(s)
+        for i in range(len(dictionary)):
+            f.write(charactersTobeloaded[i])
+            f.write("\n")
+            for line in dictionary[i]:
+                f.write(line.encode('UTF-8') + "\n")
+            f.write("\n\n\n\n")
+        f.close()
 
     def calculate_average(self):
         average = 0
@@ -195,15 +229,20 @@ class DataLoader():
         average = average / len(self.raw_stroke_data)
         return average
 
-    def getLettersCount(self, data):
+    def getLettersCount(self, data , stop):
         dictionaryLetters = {}
+        counter = 0
         number = [0] * (len(self.alphabet) + 1)
         for i in range(len(data)):
+            if (len(data[i]) < stop):
+                continue
+            counter += 1
             for j in range(len(data[i])):
+                if (j > stop - 1): break
                 number[self.alphabet.find(data[i][j]) + 1] += 1
         dictionaryLetters = {self.alphabet[i] : number[i + 1] for i in range(len(self.alphabet))}
         dictionaryLetters.update({'Unknown' : number[0]})
-        print dictionaryLetters
+        return dictionaryLetters, counter
     # Needs optimizing, Does the first preprocessing steps and saves the file , then opens it again in load_preprocessed, does more preprocessing over here
     # without saving the data which is not optimized.
 
@@ -228,6 +267,7 @@ class DataLoader():
             ascii = self.raw_ascii_data[i]
             for char in self.filter:
     			ascii = ascii.replace(char,"")
+
             # Checks if number of points > tsteps + 2 then they are valid, else ignore
             if len(data) > (self.tsteps+2) and len(ascii) > self.ascii_steps:
                 # removes large gaps from the data
@@ -248,8 +288,10 @@ class DataLoader():
                   self.valid_ascii_data.append(ascii)
                 else:
                     self.stroke_data.append(data)
-
                     self.ascii_data.append(ascii)
+
+        if(self.datasetAnalysis):
+            self.dataset_analysis()
 
         # Divides the number of lines to be studied by the batch_size (Default = 32) to make batches
         self.num_batches = int(len(self.stroke_data) / self.batch_size)

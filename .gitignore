@@ -1,8 +1,9 @@
 *.pyc
 figures/
-logs/train_scribe.txt
-logs/sample_scribe.txt
+logs/
 data/ascii/
 data/lineStrokes
 .idea/
 arabicData/Data/
+logs/dataset_Info.txt
+saved/
