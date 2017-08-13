@@ -49,16 +49,15 @@ class DataLoader():
             # Uses an XML Parser that creates a tree of the xml file
 
             tree = ET.parse(filename)
-            pointslist = []
             results = []
             root = tree.getroot()
             for child in root:
-                x_offset = -1e20
-                y_offset = -1e20
                 pointslist = []
                 if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
                     points = child.text.split(",")
                     for point in points:
+                        x_offset = -1e20
+                        y_offset = -1e20
                         x, y = point.split(" ")
                         x_offset = max(x_offset, float(x))
                         y_offset = max(y_offset, float(y))
@@ -67,6 +66,7 @@ class DataLoader():
             # Createss a padding
             x_offset += 100.0
             y_offset += 100.0
+
 
             for i in range(0, len(results)):
                 for j in range(0, len(results[i])):
@@ -87,7 +87,7 @@ class DataLoader():
             shapedUnicode = root[2][0][0][0].get('value')
             unshapedUnicode = arabic_reshaper.reshape(shapedUnicode)
             if(len(shapedUnicode)!= len(unshapedUnicode)):
-                chars = list(unshapedUnicode)
+                chars = list(shapedUnicode)
                 for index, char in enumerate(chars):
                     if (not unknowntoken.__contains__(char)):
                         indexs.append(index)
@@ -96,6 +96,7 @@ class DataLoader():
 
             for index in indexs:
                 unshapedUnicode = unshapedUnicode[:index] + shapedUnicode[index] + unshapedUnicode[index:]
+
             return unshapedUnicode
 
 
@@ -167,12 +168,9 @@ class DataLoader():
             stroke_file = strokeslist[i]
             unicode_file = unicodelist[i]
 #                 print 'processing '+stroke_file
+
             wordStrokes = convert_stroke_to_array(getStrokes(stroke_file)) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
-
-            
             unicode = getUnicode(unicode_file,self.unknowntoken) # Calls the unicode line of each respective line
-
-
 
             strokes.append(wordStrokes)
             unicodes.append(unicode)
