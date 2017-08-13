@@ -30,6 +30,15 @@ def main():
 	parser.add_argument('--filter', type=str, default='\r\t\n', help='remove this from ascii before training')
 	parser.add_argument('--tsteps_per_ascii', type=int, default=24, help='expected number of pen points per character')
 
+	#Distribution parameters
+	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+	parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+	parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
+	# Flags for defining the tf.train.Server
+	parser.add_argument("--task_index",type=int,default=0,help="Index of task within the job")
+
+
+
 	# training params
 	parser.add_argument('--batch_size', type=int, default=32, help='batch size for each gradient step')
 	parser.add_argument('--nbatches', type=int, default=500, help='number of batches per epoch')
@@ -43,7 +52,6 @@ def main():
 	parser.add_argument('--decay', type=float, default=0.95, help='decay rate for rmsprop')
 	parser.add_argument('--momentum', type=float, default=0.9, help='momentum for rmsprop')
 
-	parser.add_argument('--dist', dest='dist',action='store_true',help='distribute?')
 	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
   	parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
   	parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
@@ -71,7 +79,6 @@ def main():
 	parser.set_defaults(add_info=True)
 	parser.set_defaults(train=True)
 	parser.set_defaults(validation=False)
-	parser.set_defaults(dist=False)
 	args = parser.parse_args()
 	if (args.validation):
 		validation_run(args)
@@ -102,47 +109,49 @@ def train_model(args):
 	valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
 
 	logger.write("training...")
-	
-	model.sess.run(tf.assign(model.decay, args.decay ))
-	model.sess.run(tf.assign(model.momentum, args.momentum ))
-	running_average = 0.0 ; remember_rate = 0.99
+	if(args.job_name=="ps"):
+		model.server.join()
+	else:
+		model.sess.run(tf.assign(model.decay, args.decay ))
+		model.sess.run(tf.assign(model.momentum, args.momentum ))
+		running_average = 0.0 ; remember_rate = 0.99
 
-	# Global_steps is the number indented at the end of the file
-	# Nepochs is the number the training occurs 
-	# nBatches is the number of the batches
-	for e in range(global_step/args.nbatches, args.nepochs):
-		model.sess.run(tf.assign(model.learning_rate, args.learning_rate * (args.lr_decay ** e)))
-		logger.write("learning rate: {}".format(model.learning_rate.eval()))
+		# Global_steps is the number indented at the end of the file
+		# Nepochs is the number the training occurs 
+		# nBatches is the number of the batches
+		for e in range(global_step/args.nbatches, args.nepochs):
+			model.sess.run(tf.assign(model.learning_rate, args.learning_rate * (args.lr_decay ** e)))
+			logger.write("learning rate: {}".format(model.learning_rate.eval()))
 
-		c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
-		h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
-		kappa = np.zeros((args.batch_size, args.kmixtures, 1))
+			c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
+			h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
+			kappa = np.zeros((args.batch_size, args.kmixtures, 1))
 
-		for b in range(global_step%args.nbatches, args.nbatches):
-			i = e * args.nbatches + b
-			if global_step is not 0 : i+=1 ; global_step = 0
+			for b in range(global_step%args.nbatches, args.nbatches):
+				i = e * args.nbatches + b
+				if global_step is not 0 : i+=1 ; global_step = 0
 
-			if i % args.save_every == 0 and (i > 0):
-				model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
-				data_loader.save_pointer()
+				if i % args.save_every == 0 and (i > 0):
+					model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
+					data_loader.save_pointer()
 
-			start = time.time()
-			x, y, s, c = data_loader.next_batch()
+				start = time.time()
+				x, y, s, c = data_loader.next_batch()
 
-			feed = {model.input_data: x, model.target_data: y, model.char_seq: c, model.init_kappa: kappa, \
-					model.istate_cell0.c: c0, model.istate_cell1.c: c1, model.istate_cell2.c: c2, \
-					model.istate_cell0.h: h0, model.istate_cell1.h: h1, model.istate_cell2.h: h2}
+				feed = {model.input_data: x, model.target_data: y, model.char_seq: c, model.init_kappa: kappa, \
+						model.istate_cell0.c: c0, model.istate_cell1.c: c1, model.istate_cell2.c: c2, \
+						model.istate_cell0.h: h0, model.istate_cell1.h: h1, model.istate_cell2.h: h2}
 
-			[train_loss, _] = model.sess.run([model.cost, model.train_op], feed)
-			feed.update(valid_inputs)
-			feed[model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-			[valid_loss] = model.sess.run([model.cost], feed)
-			
-			running_average = running_average*remember_rate + train_loss*(1-remember_rate)
+				[train_loss, _] = model.sess.run([model.cost, model.train_op], feed)
+				feed.update(valid_inputs)
+				feed[model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				[valid_loss] = model.sess.run([model.cost], feed)
+				
+				running_average = running_average*remember_rate + train_loss*(1-remember_rate)
 
-			end = time.time()
-			if i % 10 is 0: logger.write("{}/{}, loss = {:.3f}, regloss = {:.5f}, valid_loss = {:.3f}, time = {:.3f}" \
-				.format(i, args.nepochs * args.nbatches, train_loss, running_average, valid_loss, end - start) )
+				end = time.time()
+				if i % 10 is 0: logger.write("{}/{}, loss = {:.3f}, regloss = {:.5f}, valid_loss = {:.3f}, time = {:.3f}" \
+					.format(i, args.nepochs * args.nbatches, train_loss, running_average, valid_loss, end - start) )
 	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
 	data_loader.save_pointer()
 
