@@ -52,12 +52,6 @@ def main():
 	parser.add_argument('--decay', type=float, default=0.95, help='decay rate for rmsprop')
 	parser.add_argument('--momentum', type=float, default=0.9, help='momentum for rmsprop')
 
-	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
-  	parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
-  	parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
-  	# Flags for defining the tf.train.Server
-  	parser.add_argument("--task_index",type=int,default=0,help="Index of task within the job")
-
 	#book-keeping
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
 	parser.add_argument('--log_dir', type=str, default='./logs/', help='location, relative to execution, of log files')
