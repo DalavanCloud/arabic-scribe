@@ -282,7 +282,11 @@ class Model():
 
 		self.sess = tf.InteractiveSession(server.target)
 		self.saver = tf.train.Saver(tf.global_variables())
-		self.sess.run(tf.global_variables_initializer())
+
+		if(self.job_name=="ps"):
+			server.join()
+		else:
+			self.sess.run(tf.global_variables_initializer())
 		# ----- for restoring previous models
 	def try_load_model(self, save_path):
 		load_was_success = True # yes, I'm being optimistic
