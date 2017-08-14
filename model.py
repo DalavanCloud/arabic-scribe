@@ -249,11 +249,11 @@ class Model():
 			self.momentum = tf.Variable(0.0, trainable=False)
 			tvars = tf.trainable_variables()
 
-		with tf.device("/job:worker/task:0/gpu:0"):
-			logger.write("Task 0 worker")
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
+			logger.write("First half gradient")
 			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
-		with tf.device("/job:worker/task:1/gpu:0"):
-			logger.write("Task 1 worker")
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
+			logger.write("Second half gradient")
 			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 
 			testGradient = testGradient1+testGradient2
