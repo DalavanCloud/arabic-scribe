@@ -249,7 +249,7 @@ class Model():
 			self.momentum = tf.Variable(0.0, trainable=False)
 			tvars = tf.trainable_variables()
 
-		with tf.device("/job:worker/task:0/cpu:0"):
+		with tf.device("/job:worker/task:0/gpu:0"):
 			logger.write("Task 0 worker")
 			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 		with tf.device("/job:worker/task:1/gpu:0"):
