@@ -88,24 +88,24 @@ def train_model(args):
 	# Preprocessing complete, created a validation set and training set , and got the number of batches.
 
 	logger.write("building model...")
-	model = Model(args, logger=logger)
-
-	logger.write("attempt to load saved model...")
-	load_was_success, global_step = model.try_load_model(args.save_path)
-
-	# Validates data once, which validates only 32 lines out of the entire validation set
-	v_x, v_y, v_s, v_c = data_loader.validation_data()
-	# INPUTS data to the model
-	# V_X ==> x_batch 
-	# v_y ==> y_batch (Which is the next point after the x_batch)
-	# v_c ==> One_hot sequence
-	# Target_data ==> This is the next point to be predicted
-	valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
-
 	logger.write("training...")
 	if(args.job_name=="ps"):
 		model.server.join()
 	else:
+		model = Model(args, logger=logger)
+
+		logger.write("attempt to load saved model...")
+		load_was_success, global_step = model.try_load_model(args.save_path)
+
+		# Validates data once, which validates only 32 lines out of the entire validation set
+		v_x, v_y, v_s, v_c = data_loader.validation_data()
+		# INPUTS data to the model
+		# V_X ==> x_batch 
+		# v_y ==> y_batch (Which is the next point after the x_batch)
+		# v_c ==> One_hot sequence
+		# Target_data ==> This is the next point to be predicted
+		valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
+	
 		model.sess.run(tf.assign(model.decay, args.decay ))
 		model.sess.run(tf.assign(model.momentum, args.momentum ))
 		running_average = 0.0 ; remember_rate = 0.99

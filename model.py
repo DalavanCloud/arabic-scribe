@@ -48,37 +48,38 @@ class Model():
 		server = tf.train.Server(cluster,job_name=self.job_name,task_index=self.task_index)
 
 
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
+			# ----- build the basic recurrent network architecture
+			# Creates 3 cells, each containing rnn_size (Default = 100) hidden unit (Basically 100 neuron OR sigmoid)
 
-		# ----- build the basic recurrent network architecture
-		# Creates 3 cells, each containing rnn_size (Default = 100) hidden unit (Basically 100 neuron OR sigmoid)
-		cell_func = tf.contrib.rnn.LSTMCell # could be GRUCell or RNNCell
-		self.cell0 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
-		self.cell1 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
-		self.cell2 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
+			cell_func = tf.contrib.rnn.LSTMCell # could be GRUCell or RNNCell
+			self.cell0 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
+			self.cell1 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
+			self.cell2 = cell_func(args.rnn_size, state_is_tuple=True, initializer=self.graves_initializer)
 
-		# Checks the dropout , if 1 then it keeps all the previous data, if 0 then removes it all.
-		# If dropout < 1 then enters the if condition which makes the output_keep_prob = self.dropout (Default = 0.85)
-		if (self.train and self.dropout < 1): # training mode
-			self.cell0 = tf.contrib.rnn.DropoutWrapper(self.cell0, output_keep_prob = self.dropout)
-			self.cell1 = tf.contrib.rnn.DropoutWrapper(self.cell1, output_keep_prob = self.dropout)
-			self.cell2 = tf.contrib.rnn.DropoutWrapper(self.cell2, output_keep_prob = self.dropout)
+			# Checks the dropout , if 1 then it keeps all the previous data, if 0 then removes it all.
+			# If dropout < 1 then enters the if condition which makes the output_keep_prob = self.dropout (Default = 0.85)
+			if (self.train and self.dropout < 1): # training mode
+				self.cell0 = tf.contrib.rnn.DropoutWrapper(self.cell0, output_keep_prob = self.dropout)
+				self.cell1 = tf.contrib.rnn.DropoutWrapper(self.cell1, output_keep_prob = self.dropout)
+				self.cell2 = tf.contrib.rnn.DropoutWrapper(self.cell2, output_keep_prob = self.dropout)
 
 
-		# Creates input placeholder inorder not to generate an error, with size 1st dimension, not defined, second dimension tsteps, third dimension 3 elements
-		self.input_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
-		# Same as input data
-		self.target_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
-		# 
-		self.istate_cell0 = self.cell0.zero_state(batch_size=self.batch_size, dtype=tf.float32)
-		self.istate_cell1 = self.cell1.zero_state(batch_size=self.batch_size, dtype=tf.float32)
-		self.istate_cell2 = self.cell2.zero_state(batch_size=self.batch_size, dtype=tf.float32)
+			# Creates input placeholder inorder not to generate an error, with size 1st dimension, not defined, second dimension tsteps, third dimension 3 elements
+			self.input_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
+			# Same as input data
+			self.target_data = tf.placeholder(dtype=tf.float32, shape=[None, self.tsteps, 3])
+			# 
+			self.istate_cell0 = self.cell0.zero_state(batch_size=self.batch_size, dtype=tf.float32)
+			self.istate_cell1 = self.cell1.zero_state(batch_size=self.batch_size, dtype=tf.float32)
+			self.istate_cell2 = self.cell2.zero_state(batch_size=self.batch_size, dtype=tf.float32)
 
-		#slice the input volume into separate vols for each tstep
-		# Divided the tensor placeholder data into 150 individual tensor flow inputs
-		inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(self.input_data, self.tsteps, 1)]		
-		#build cell0 computational graph
-		# Output of cell 0 and next state (final state) of cell 0
-		outs_cell0, self.fstate_cell0 = tf.contrib.legacy_seq2seq.rnn_decoder(inputs, self.istate_cell0, self.cell0, loop_function=None, scope='cell0')
+			#slice the input volume into separate vols for each tstep
+			# Divided the tensor placeholder data into 150 individual tensor flow inputs
+			inputs = [tf.squeeze(input_, [1]) for input_ in tf.split(self.input_data, self.tsteps, 1)]		
+			#build cell0 computational graph
+			# Output of cell 0 and next state (final state) of cell 0
+			outs_cell0, self.fstate_cell0 = tf.contrib.legacy_seq2seq.rnn_decoder(inputs, self.istate_cell0, self.cell0, loop_function=None, scope='cell0')
 
 	# ----- build the gaussian character window
 		def get_window(alpha, beta, kappa, c):
@@ -129,43 +130,42 @@ class Model():
 			alpha, beta, kappa = tf.split(abk, 3, 1) # alpha_hat, etc ~ [?,kmixtures]
 			kappa = kappa + prev_kappa
 			return alpha, beta, kappa # each ~ [?,kmixtures,1]
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
 
-		# Default KMixture = 1
-		# Ascii_steps = tsteps / tsteps_per_ascii (Number of ascii chars (Default 150/25 = 6))
-		self.init_kappa = tf.placeholder(dtype=tf.float32, shape=[None, self.kmixtures, 1]) 
-		self.char_seq = tf.placeholder(dtype=tf.float32, shape=[None, self.ascii_steps, self.char_vec_len])
+			# Default KMixture = 1
+			# Ascii_steps = tsteps / tsteps_per_ascii (Number of ascii chars (Default 150/25 = 6))
+			self.init_kappa = tf.placeholder(dtype=tf.float32, shape=[None, self.kmixtures, 1]) 
+			self.char_seq = tf.placeholder(dtype=tf.float32, shape=[None, self.ascii_steps, self.char_vec_len])
 
-		prev_kappa = self.init_kappa
-		prev_window = self.char_seq[:,0,:]
+			prev_kappa = self.init_kappa
+			prev_window = self.char_seq[:,0,:]
 
-		#add gaussian window result
-		reuse = False
-		for i in range(len(outs_cell0)):
-			[alpha, beta, new_kappa] = get_window_params(i, outs_cell0[i], self.kmixtures, prev_kappa, reuse=reuse)
-			window, phi = get_window(alpha, beta, new_kappa, self.char_seq)
-
-
-			# Outs_cell0[i] shape ==> 32,100
-			# Window shape ==> 32,54
-
-			outs_cell0[i] = tf.concat((outs_cell0[i],window), 1) #concat outputs
-			#Outs_cell0[i] new shape ==> 32,154
-			#Inputs[i] shape ==> ?,3
-			outs_cell0[i] = tf.concat((outs_cell0[i],inputs[i]), 1) #concat input data
-			#Outs_cell0[i] new shape ==> 32,157
-
-			prev_kappa = new_kappa
-			prev_window = window
-			reuse = True
-		#save some attention mechanism params (useful for sampling/debugging later)
-		self.window = window
-		self.phi = phi
-		self.new_kappa = new_kappa
-		self.alpha = alpha
+			#add gaussian window result
+			reuse = False
+			for i in range(len(outs_cell0)):
+				[alpha, beta, new_kappa] = get_window_params(i, outs_cell0[i], self.kmixtures, prev_kappa, reuse=reuse)
+				window, phi = get_window(alpha, beta, new_kappa, self.char_seq)
 
 
-		with tf.device('/job:worker/task:0/gpu:0'):
-			logger.write("This should be ran on worker and task 0 ")
+				# Outs_cell0[i] shape ==> 32,100
+				# Window shape ==> 32,54
+
+				outs_cell0[i] = tf.concat((outs_cell0[i],window), 1) #concat outputs
+				#Outs_cell0[i] new shape ==> 32,154
+				#Inputs[i] shape ==> ?,3
+				outs_cell0[i] = tf.concat((outs_cell0[i],inputs[i]), 1) #concat input data
+				#Outs_cell0[i] new shape ==> 32,157
+
+				prev_kappa = new_kappa
+				prev_window = window
+				reuse = True
+			#save some attention mechanism params (useful for sampling/debugging later)
+			self.window = window
+			self.phi = phi
+			self.new_kappa = new_kappa
+			self.alpha = alpha
+
+
 			# ----- finish building LSTMs 2 and 3
 			# Connects output of cell 0 as initial cell 1 to input of cell 1
 			outs_cell1, self.fstate_cell1 = tf.contrib.legacy_seq2seq.rnn_decoder(outs_cell0, self.istate_cell1, self.cell1, loop_function=None, scope='cell1')
@@ -230,9 +230,8 @@ class Model():
 		# reshape target data (as we did the input data)
 		# flat_target_data shape ==> ?,3  
 		# (Most probably tsteps * number of data )
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
 
-		with tf.device('/job:worker/task:1/gpu:0'):
-			logger.write("This should be ran on worker and task 1 ")
 			flat_target_data = tf.reshape(self.target_data,[-1, 3])
 			# Each array will contain ?,1
 			[x1_data, x2_data, eos_data] = tf.split(flat_target_data, 3, 1) #we might as well split these now
@@ -243,30 +242,21 @@ class Model():
 			self.cost = loss / (self.batch_size * self.tsteps)
 
 
-		# ----- bring together all variables and prepare for training
-		
-		with tf.device('/job:ps/task:0/cpu:0'):
-			logger.write("This should be ran on ps and task 0")
+			# ----- bring together all variables and prepare for training
+			
 			self.learning_rate = tf.Variable(0.0, trainable=False)
 			self.decay = tf.Variable(0.0, trainable=False)
 			self.momentum = tf.Variable(0.0, trainable=False)
 			tvars = tf.trainable_variables()
 
-
-		with tf.device('/job:worker/task:0/gpu:0'):
-			logger.write("This should be ran on worker and task 0 ")
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
 			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
 
-		with tf.device('/job:worker/task:1/gpu:0'):
-			logger.write("This should be ran on worker and task 1")
 			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 
-		with tf.device('/job:ps/task:0/cpu:0'):
-			logger.write("This should be ran on ps and task 0")
 			testGradient = testGradient1+testGradient2
 
-		with tf.device('/job:worker/task:0/gpu:0'):
-			logger.write("This should be ran on worker and task 0 ")
 			grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
 			if args.optimizer == 'adam':
 				self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -279,15 +269,12 @@ class Model():
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
-
-		self.sess = tf.InteractiveSession(server.target)
 		self.saver = tf.train.Saver(tf.global_variables())
+		sv = tf.train.Supervisor(is_chief=(FLAGS.task_index == 0))
+		self.sess = sv.prepare_or_wait_for_session(server.target)
+		self.sess.run(tf.global_variables_initializer())
 
-		if(self.job_name=="ps"):
-			server.join()
-		else:
-			self.sess.run(tf.global_variables_initializer())
-		# ----- for restoring previous models
+	# ----- for restoring previous models
 	def try_load_model(self, save_path):
 		load_was_success = True # yes, I'm being optimistic
 		global_step = 0
