@@ -252,7 +252,6 @@ class Model():
 		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
 			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
-
 			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 
 			testGradient = testGradient1+testGradient2
@@ -269,10 +268,13 @@ class Model():
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
+		self.assign_decay = tf.assign(self.decay, args.decay )
+		self.assign_momentum = tf.assign(self.momentum, args.momentum )
+		self.assign_learning_rate = tf.assign(self.learning_rate, args.learning_rate)
 		self.saver = tf.train.Saver(tf.global_variables())
-		sv = tf.train.Supervisor(is_chief=(self.task_index == 0))
-		self.sess = sv.prepare_or_wait_for_session(server.target)
-		self.sess.run(tf.global_variables_initializer())
+		sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
+		config = tf.ConfigProto(allow_soft_placement = True)
+		self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
 
 	# ----- for restoring previous models
 	def try_load_model(self, save_path):

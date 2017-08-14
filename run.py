@@ -107,19 +107,20 @@ def train_model(args):
 		# Target_data ==> This is the next point to be predicted
 		valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
 	
-		model.sess.run(tf.assign(model.decay, args.decay ))
-		model.sess.run(tf.assign(model.momentum, args.momentum ))
+		model.sess.run(model.assign_momentum)
+		model.sess.run(model.assign_decay)
 		running_average = 0.0 ; remember_rate = 0.99
 
 		# Global_steps is the number indented at the end of the file
 		# Nepochs is the number the training occurs 
 		# nBatches is the number of the batches
 		for e in range(global_step/args.nbatches, args.nepochs):
-			model.sess.run(tf.assign(model.learning_rate, args.learning_rate * (args.lr_decay ** e)))
-			logger.write("learning rate: {}".format(model.learning_rate.eval()))
+			model.sess.run(model.assign_learning_rate)
+			# logger.write("learning rate: {}".format(model.learning_rate.eval()))
+			logger.write("Learning rate")
 
-			c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
-			h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
+			c0, c1, c2 = model.istate_cell0.c.eval(session=model.sess), model.istate_cell1.c.eval(session=model.sess), model.istate_cell2.c.eval(session=model.sess)
+			h0, h1, h2 = model.istate_cell0.h.eval(session=model.sess), model.istate_cell1.h.eval(session=model.sess), model.istate_cell2.h.eval(session=model.sess)
 			kappa = np.zeros((args.batch_size, args.kmixtures, 1))
 
 			for b in range(global_step%args.nbatches, args.nbatches):
