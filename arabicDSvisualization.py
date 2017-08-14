@@ -6,22 +6,37 @@ for dirName, subdirList, fileList in os.walk("./arabicData"):
            if(fname.__contains__("inkml")):
               filelist.append(dirName + "/" + fname)
 fname = next((fname for fname in filelist if "1231874526312.inkml" in fname), None)
+fname = filelist[1]
 tree = ET.parse(fname)
 X = []
 Y = []
 durations = []
+counter =0
 root = tree.getroot()
+dd = 2000
 for child in root:
-    if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
+    if(counter==dd):
+        break
+    if (child.tag == "{http://www.w3.org/2003/InkML}trace" ):
         durationP=float(child.attrib.get("duration"))
         points = child.text.split(",")
-        durations.append(durationP / len(points)/1000.0)
-        for point in points:
-            x,y = point.split(" ")
-            X.append(x)
-            Y.append(y)
+        durations.append(durationP / len(points)/100.0)
+        for point in (points):
+             if( counter == dd):
+                 break
+             x,y = point.split(" ")
+             X.append(x)
+             Y.append(y)
+             counter+=1
+
+
+
         X.append("eos")
         Y.append('eos')
+
+
+print X
+
 
 from xml.etree.ElementTree import Element, SubElement, tostring
 
