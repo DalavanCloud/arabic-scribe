@@ -44,8 +44,8 @@ class Model():
 		self.job_name = args.job_name
 		self.task_index = args.task_index
 
-		cluster = tf.train.ClusterSpec({"ps": self.ps_hosts, "worker": self.worker_hosts})
-		server = tf.train.Server(cluster,job_name=self.job_name,task_index=self.task_index)
+		cluster = args.cluster
+		server = args.server
 
 
 		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):

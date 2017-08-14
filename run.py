@@ -86,11 +86,12 @@ def train_model(args):
 	logger.write("loading data...")
 	data_loader = DataLoader(args, logger=logger)
 	# Preprocessing complete, created a validation set and training set , and got the number of batches.
-
+	args.cluster = tf.train.ClusterSpec({"ps": self.ps_hosts, "worker": self.worker_hosts})
+	args.server = tf.train.Server(cluster,job_name=self.job_name,task_index=self.task_index)
 	logger.write("building model...")
 	logger.write("training...")
 	if(args.job_name=="ps"):
-		model.server.join()
+		args.server.join()
 	else:
 		model = Model(args, logger=logger)
 
