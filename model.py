@@ -259,7 +259,8 @@ class Model():
 			with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
 				logger.write("Second half gradient on cpu")
 				testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
-
+		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d" % self.task_index,cluster=cluster)):
+			
 			testGradient = testGradient1+testGradient2
 
 			grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
