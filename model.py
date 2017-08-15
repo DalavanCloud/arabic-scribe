@@ -245,19 +245,11 @@ class Model():
 			self.decay = tf.Variable(0.0, trainable=False)
 			self.momentum = tf.Variable(0.0, trainable=False)
 			tvars = tf.trainable_variables()
-		if (self.task_index % 2 == 0):
-			with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
+			with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
 				logger.write("First half gradient on  cpu")
 				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
-			with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
-				logger.write("Second half gradient on gpu")
-				testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
-		else:
-			with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
-				logger.write("First half gradient on  gpu")
-				testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 			with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
-				logger.write("Second half gradient on cpu")
+				logger.write("Second half gradient on gpu")
 				testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])
 		with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d" % self.task_index,cluster=cluster)):
 			
