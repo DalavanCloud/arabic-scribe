@@ -89,7 +89,7 @@ def train_model(args):
 	# Preprocessing complete, created a validation set and training set , and got the number of batches.
 	args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
 	args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
-	if(args.job_name=="ps"):
+	if(args.job_name=="worker"):
 		args.server.join()
 	else:
 		logger.write("building model...")
