@@ -90,7 +90,9 @@ def train_model(args):
 	args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
 	args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
 	if(args.job_name=="worker"):
+		logger.writer("Joining server...")
 		args.server.join()
+		logger.write("Joined server...")
 	else:
 		logger.write("building model...")
 		model = Model(args, logger=logger)
@@ -139,10 +141,11 @@ def train_model(args):
 						model.istate_cell0.h: h0, model.istate_cell1.h: h1, model.istate_cell2.h: h2}
 
 				[train_loss, _] = model.sess.run([model.cost, model.train_op], feed)
+				logger.write(i)
 				feed.update(valid_inputs)
 				feed[model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
 				[valid_loss] = model.sess.run([model.cost], feed)
-				
+				logger.write("valid")
 				running_average = running_average*remember_rate + train_loss*(1-remember_rate)
 
 				end = time.time()

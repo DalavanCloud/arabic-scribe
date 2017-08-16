@@ -269,10 +269,10 @@ class Model():
 		self.assign_momentum = tf.assign(self.momentum, args.momentum )
 		self.assign_learning_rate = tf.assign(self.learning_rate, args.learning_rate)
 		self.saver = tf.train.Saver(tf.global_variables())
-		sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
+		# sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
 		config = tf.ConfigProto(allow_soft_placement = True)
-		self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
-
+		# self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
+		self.sess = tf.InteractiveSession(sever.target, config=config)
 
 	# ----- for restoring previous models
 	def try_load_model(self, save_path):
