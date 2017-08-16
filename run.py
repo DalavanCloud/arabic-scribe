@@ -90,7 +90,7 @@ def train_model(args):
 	args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
 	args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
 	if(args.job_name=="worker"):
-		logger.writer("Joining server...")
+		logger.write("Joining server...")
 		args.server.join()
 		logger.write("Joined server...")
 	else:
