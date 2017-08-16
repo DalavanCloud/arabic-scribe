@@ -247,11 +247,11 @@ class Model():
 			# with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/cpu:0" % self.task_index,cluster=cluster)):
 		with tf.device("/job:worker/task:0/gpu:0"):
 			logger.write("First half gradient on  worker task 0")
-			self.testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
+			testGradient2 = tf.gradients(self.cost, tvars[len(tvars)/2:])
 		# with tf.device(tf.train.replica_device_setter(worker_device="/job:worker/task:%d/gpu:0" % self.task_index,cluster=cluster)):
 		with tf.device("/job:worker/task:1/gpu:0"):
 			logger.write("Second half gradient on worker task 1")
-			self.testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])	
+			testGradient1 = tf.gradients(self.cost, tvars[:len(tvars)/2])	
 		testGradient = testGradient1+testGradient2
 
 		grads, _ = tf.clip_by_global_norm(testGradient, self.grad_clip)
