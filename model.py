@@ -272,7 +272,8 @@ class Model():
 		# sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
 		config = tf.ConfigProto(allow_soft_placement = True)
 		# self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
-		self.sess = tf.InteractiveSession(sever.target, config=config)
+		self.sess = tf.InteractiveSession(server.target, config=config)
+		self.sess.run(tf.global_variables_initializer())
 
 	# ----- for restoring previous models
 	def try_load_model(self, save_path):
