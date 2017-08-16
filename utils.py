@@ -48,11 +48,36 @@ class DataLoader():
             # Each XML File represents an entire line in the form
             # Uses an XML Parser that creates a tree of the xml file
 
+
+
+
+            # tree = ET.parse(filename)
+            # results = []
+            # root = tree.getroot()
+            # for child in root:
+            #     pointslist = []
+            #     if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
+            #         points = child.text.split(",")
+            #         for point in points:
+            #             x_offset = -1e20
+            #             y_offset = -1e20
+            #             x, y = point.split(" ")
+            #             x_offset = max(x_offset, float(x))
+            #             y_offset = max(y_offset, float(y))
+            #             x_max = max(x_max, float(x))
+            #             y_max = max(y_max, float(y))
+            #             pointslist.append([x_offset, y_offset])
+            #         results.append(pointslist)
+
+
             tree = ET.parse(filename)
             results = []
             root = tree.getroot()
+            x_max = -1e20
+            y_max = -1e20
+            X = []
+            Y = []
             for child in root:
-                pointslist = []
                 if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
                     points = child.text.split(",")
                     for point in points:
@@ -61,11 +86,64 @@ class DataLoader():
                         x, y = point.split(" ")
                         x_offset = max(x_offset, float(x))
                         y_offset = max(y_offset, float(y))
-                        pointslist.append([x_offset, y_offset])
-                    results.append(pointslist)
+                        x_max = max(x_max, float(x))
+                        y_max = max(y_max, float(y))
+                        X.append(x_offset)
+                        Y.append(y_offset)
+                    X.append("eos")
+                    Y.append('eos')
+            gx = X
+            gy = Y
+
+            listOfStrokes = []
+            indices = [i for i, x in enumerate(X) if x == "eos"]
+            flag = 0
+            maxm = []
+            minm = []
+            for i in indices:
+                temp = [map(int, X[flag:i]), map(int, Y[flag:i])]
+                maxm.append(max(temp[0]))
+                minm.append(min(temp[0]))
+                listOfStrokes.append(temp)
+                flag = i + 1
+
+            ourIndices = []
+            margin = 5
+            for i in range(len(listOfStrokes)):
+                maxlist = [j for j, x in enumerate(maxm[:i]) if x + margin > maxm[i]]
+                minlist = [j for j, x in enumerate(minm[:i]) if x - margin < minm[i]]
+                commonElement = list(set(maxlist).intersection(minlist))
+                commonElement.sort()
+                if (maxlist and minlist and commonElement):
+                    ourIndices.append([i, commonElement[-1]])
+
+            NewlistOfStrokes = []
+            for i in range(len(listOfStrokes)):
+                stroke = listOfStrokes[i]
+                if (not any(e[1] == i for e in ourIndices)):
+                    NewlistOfStrokes.append(stroke)
+                    continue
+                for index in ourIndices:
+                    if (index[1] == i):
+                        for j, x in enumerate(stroke[0]):
+                            if (x < maxm[index[0]] + margin and x > maxm[index[0]] - margin):
+                                NewlistOfStrokes.append([stroke[0][:j + 1], stroke[1][:j + 1]])
+                                NewlistOfStrokes.append(listOfStrokes[index[0]])
+                                stroke = [stroke[0][j:], stroke[1][j:]]
+                                break
+                NewlistOfStrokes.append(stroke)
+
+            for stroke in NewlistOfStrokes:
+                pointslist = []
+                if (len(stroke[0]) == 1): continue
+                for i in range(len(stroke[0])):
+                    point = [stroke[0][i],stroke[1][i]]
+                    pointslist.append(point)
+                results.append(pointslist)
+
             # Createss a padding
-            x_offset += 100.0
-            y_offset += 100.0
+            x_offset = x_max + 100.0
+            y_offset = y_max + 100.0
 
 
             for i in range(0, len(results)):
