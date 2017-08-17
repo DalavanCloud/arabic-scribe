@@ -14,6 +14,8 @@ from utils import *
 
 class DataLoader():
     def __init__(self, args, logger, limit = 500):
+        self.preprocessing_type = args.preprocessing_type
+        self.visual_dir = args.visual_dir
         self.datasetAnalysis = args.datasetAnalysis
         self.data_dir = args.data_dir
         self.alphabet = args.alphabet
@@ -42,42 +44,20 @@ class DataLoader():
 
     def preprocess(self, stroke_dir, ascii_dir, data_file):
 
-
+        # def preprocessDataset():
         # function to read each individual xml file
         def getStrokes(filename):
             # Each XML File represents an entire line in the form
             # Uses an XML Parser that creates a tree of the xml file
 
-
-
-
-            # tree = ET.parse(filename)
-            # results = []
-            # root = tree.getroot()
-            # for child in root:
-            #     pointslist = []
-            #     if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
-            #         points = child.text.split(",")
-            #         for point in points:
-            #             x_offset = -1e20
-            #             y_offset = -1e20
-            #             x, y = point.split(" ")
-            #             x_offset = max(x_offset, float(x))
-            #             y_offset = max(y_offset, float(y))
-            #             x_max = max(x_max, float(x))
-            #             y_max = max(y_max, float(y))
-            #             pointslist.append([x_offset, y_offset])
-            #         results.append(pointslist)
-
-
             tree = ET.parse(filename)
-            results = []
             root = tree.getroot()
+
+            results = []
             x_max = -1e20
             y_max = -1e20
-            X = []
-            Y = []
             for child in root:
+                pointslist = []
                 if (child.tag == "{http://www.w3.org/2003/InkML}trace"):
                     points = child.text.split(",")
                     for point in points:
@@ -88,70 +68,23 @@ class DataLoader():
                         y_offset = max(y_offset, float(y))
                         x_max = max(x_max, float(x))
                         y_max = max(y_max, float(y))
-                        X.append(x_offset)
-                        Y.append(y_offset)
-                    X.append("eos")
-                    Y.append('eos')
-            gx = X
-            gy = Y
+                        pointslist.append([x_offset, y_offset])
+                    results.append(pointslist)
 
-            listOfStrokes = []
-            indices = [i for i, x in enumerate(X) if x == "eos"]
-            flag = 0
-            maxm = []
-            minm = []
-            for i in indices:
-                temp = [map(int, X[flag:i]), map(int, Y[flag:i])]
-                maxm.append(max(temp[0]))
-                minm.append(min(temp[0]))
-                listOfStrokes.append(temp)
-                flag = i + 1
-
-            ourIndices = []
-            margin = 5
-            for i in range(len(listOfStrokes)):
-                maxlist = [j for j, x in enumerate(maxm[:i]) if x + margin > maxm[i]]
-                minlist = [j for j, x in enumerate(minm[:i]) if x - margin < minm[i]]
-                commonElement = list(set(maxlist).intersection(minlist))
-                commonElement.sort()
-                if (maxlist and minlist and commonElement):
-                    ourIndices.append([i, commonElement[-1]])
-
-            NewlistOfStrokes = []
-            for i in range(len(listOfStrokes)):
-                stroke = listOfStrokes[i]
-                if (not any(e[1] == i for e in ourIndices)):
-                    NewlistOfStrokes.append(stroke)
-                    continue
-                for index in ourIndices:
-                    if (index[1] == i):
-                        for j, x in enumerate(stroke[0]):
-                            if (x < maxm[index[0]] + margin and x > maxm[index[0]] - margin):
-                                NewlistOfStrokes.append([stroke[0][:j + 1], stroke[1][:j + 1]])
-                                NewlistOfStrokes.append(listOfStrokes[index[0]])
-                                stroke = [stroke[0][j:], stroke[1][j:]]
-                                break
-                NewlistOfStrokes.append(stroke)
-
-            for stroke in NewlistOfStrokes:
-                pointslist = []
-                if (len(stroke[0]) == 1): continue
-                for i in range(len(stroke[0])):
-                    point = [stroke[0][i],stroke[1][i]]
-                    pointslist.append(point)
-                results.append(pointslist)
+            results = extraPreprocessing(results)
 
             # Createss a padding
-            x_offset = x_max + 100.0
-            y_offset = y_max + 100.0
+            x_max = x_max + 100.0
+            y_max = y_max + 100.0
 
+            import random
+            if(random.randint(0, 99) < 2):
+                visualize(filename=fname,results=results)
 
             for i in range(0, len(results)):
                 for j in range(0, len(results[i])):
-                    results[i][j] = [results[i][j][0] - x_offset, results[i][j][1] - y_offset]
+                    results[i][j] = [results[i][j][0] - x_max, results[i][j][1] - y_max]
 
-            # visualize(fname,results,x_offset,y_offset)
-            # exit(0)
 
             # result is basically a 2D array each outer array represents a Stroke and each inner array represents a stroke
             # result[0][0] represents the first point in the first stroke
@@ -159,10 +92,60 @@ class DataLoader():
 
             return results
 
-        def visualize(filename,results,x_offset,y_offset):
+        def extraPreprocessing(results):
+
+            if(self.preprocessing_type == "dotsRepositioned"):
+                listOfStrokes = []
+                maxm = []
+                minm = []
+                for stroke in results:
+                    temp = [map(int, list(zip(*stroke)[0])), map(int, list(zip(*stroke)[1]))]
+                    maxm.append(max(temp[0]))
+                    minm.append(min(temp[0]))
+                    listOfStrokes.append(temp)
+                ourIndices = []
+                margin = 5
+
+                for i in range(len(listOfStrokes)):
+                    maxlist = [j for j, x in enumerate(maxm[:i]) if x + margin > maxm[i]]
+                    minlist = [j for j, x in enumerate(minm[:i]) if x - margin < minm[i]]
+                    commonElement = list(set(maxlist).intersection(minlist))
+                    commonElement.sort()
+                    if (maxlist and minlist and commonElement):
+                        ourIndices.append([i, commonElement[-1]])
+
+                NewlistOfStrokes = []
+                for i in range(len(listOfStrokes)):
+                    stroke = listOfStrokes[i]
+                    if (not any(e[1] == i for e in ourIndices)):
+                        NewlistOfStrokes.append(stroke)
+                        continue
+                    for index in ourIndices:
+                        if (index[1] == i):
+                            for j, x in enumerate(stroke[0]):
+                                if (x < maxm[index[0]] + margin and x > maxm[index[0]] - margin):
+                                    NewlistOfStrokes.append([stroke[0][:j + 1], stroke[1][:j + 1]])
+                                    NewlistOfStrokes.append(listOfStrokes[index[0]])
+                                    stroke = [stroke[0][j:], stroke[1][j:]]
+                                    break
+                    NewlistOfStrokes.append(stroke)
+                results = []
+                for stroke in NewlistOfStrokes:
+                    pointslist = []
+                    if (len(stroke[0]) == 1): continue
+                    for i in range(len(stroke[0])):
+                        point = [stroke[0][i], stroke[1][i]]
+                        pointslist.append(point)
+                    results.append(pointslist)
+            return results
+
+
+
+
+        def visualize(filename,results):
             from xml.etree.ElementTree import Element, SubElement, tostring
 
-            Visual_dir = self.data_dir + "/VisualizedFiles/"
+            save_dir_name = self.visual_dir +"/"+filename.split(".")[0]+self.preprocessing_type+".xml"
 
             rootname = "root"
             root = Element(rootname)
@@ -171,35 +154,30 @@ class DataLoader():
             widthChild.text = "800"
             heightChild = SubElement(infosChild, "height")
             heightChild.text = "600"
-
             animationChild = SubElement(root, "animation")
 
-            startOfStrokeFlag = True
-            k = 0
-            time = 0
-
+            time = 0.01
 
             for i in range(0, len(results)):
 
                 actionChild = SubElement(animationChild, "action")
-                time += 0.1
                 actionChild.set('time', str(time))
                 startpointChild = SubElement(actionChild, "startpoint")
-                startpointChild.set('x', str(results[i][0][0] + x_offset))
-                startpointChild.set('y', str(results[i][0][1] + y_offset))
+                startpointChild.set('x', str(results[i][0][0] ))
+                startpointChild.set('y', str(results[i][0][1] ))
                 startpointChild.set('width', "3")
                 startpointChild.set('color', "255")
                 startpointChild.set('alpha', "0")
                 for j in range(1, len(results[i])):
                     actionChild = SubElement(animationChild, "action")
-                    time += 0.1
                     actionChild.set('time', str(time))
                     pointChild = SubElement(actionChild, "point")
-                    pointChild.set('x', str(results[i][j][0] + x_offset))
-                    pointChild.set('y', str(results[i][j][1] + y_offset))
+                    pointChild.set('x', str(results[i][j][0] ))
+                    pointChild.set('y', str(results[i][j][1] ))
+                    time += 0.01
 
             tree = ET.ElementTree(root)
-            tree.write(filename.split(".")[0]+"V.xml")
+            tree.write(save_dir_name)
 
 
 
@@ -421,7 +399,7 @@ class DataLoader():
 
         # print
         # print " number of noise",; print c
-        print
+        # print
         if(self.datasetAnalysis):
             self.dataset_analysis()
 

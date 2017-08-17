@@ -54,6 +54,7 @@ def main():
 
 
 	#book-keeping
+	parser.add_argument('--visual_dir', type=str, default='./visualizedFiles', help='location, relative to execution, of visualization')
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
 	parser.add_argument('--log_dir', type=str, default='./logs/', help='location, relative to execution, of log files')
 	parser.add_argument('--valid_dir', type=str, default='./valid/', help='location, relative to execution, of validation output files')
@@ -67,6 +68,10 @@ def main():
 	parser.add_argument('--bias', type=float, default=1.0, help='higher bias means neater, lower means more diverse (range is 0-5)')
 	parser.add_argument('--sleep_time', type=int, default=60*5, help='time to sleep between running sampler')
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
+
+	#preprocessing
+	parser.add_argument('--preprocessing_type', type=str, default='dotsRepositioned', help='reposition strokes of dots, relative to thier x coordinates, of dataset')
+
 
 	parser.set_defaults(repeat=False)
 	parser.set_defaults(train=True)
