@@ -58,14 +58,18 @@ def main():
 	parser.add_argument('--sleep_time', type=int, default=60*5, help='time to sleep between running sampler')
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
 	parser.add_argument('--no_info', dest='add_info', action='store_false', help='adds additional info')
+	parser.add_argument('--test_epochs', dest='test_epochs', action='store_true',help='If true, tests all the the different epochs')
 
 	parser.set_defaults(repeat=False)
 	parser.set_defaults(add_info=True)
 	parser.set_defaults(train=True)
 	parser.set_defaults(validation=False)
+	parser.set_defaults(test_epochs=False)
 	args = parser.parse_args()
 	if (args.validation):
 		validation_run(args)
+	elif (args.test_epochs):
+		test_epochs(args)
 	else:
 		train_model(args) if args.train else sample_model(args, add_info=args.add_info)
 
@@ -140,6 +144,8 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 	if args.text == '':
 		strings = ['call me ishmael some years ago', 'A project by Sam Greydanus', 'mmm mmm mmm mmm mmm mmm mmm', \
 			'What I cannot create I do not understand', 'You know nothing Jon Snow'] # test strings
+	elif args.test_epochs:
+		strings = args.text
 	else:
 		strings = [args.text]
 
@@ -183,6 +189,9 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 				w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
 				g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
 				l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+			elif (args.test_epochs):
+				l_save_path = '{}{}.png'.format(save_path,s+"-"+str(args.iteration)+"-"+str(global_step))
+				print("Saved to "+l_save_path)
 			else:
 				l_save_path = '{}figures/{}.png'.format(save_path, s)
 			if (add_info):
@@ -223,6 +232,54 @@ def validation_run(args, logger=None):
 			f.close()
 	else:
 		logger.write("No saved model.....Validating cancelled !")
+
+def test_epochs(args, logger=None):
+	args.train = False
+	args.repeat = False
+	if args.text == '':
+		args.text = ['machine','machine learning','nourhan','karim','mahmoud','amr','welcome espace']
+	logger = Logger(args) if logger is None else logger # instantiate logger, if None
+	logger.write("\nTESTING MODE LAUNCHED")
+
+	logger.write("Accessing the saved folder")
+	filelist = []
+	rootDir = './saved/'
+	for dirName, subdirList, fileList in os.walk(rootDir):
+			for fname in fileList:
+				if ".index" in fname:
+					fname = fname.partition(".index")[0]
+					if fname not in filelist:
+						logger.write("Detected Model: "+ fname)
+						filelist.append(fname)
+
+	if filelist:
+		logger.write("Finished detecting saved models")
+		logger.write("Building model")
+		model = Model(args, logger)
+		for fname in filelist:
+			logger.write("Processing Model: "+fname)
+			checkpoint = open("./saved/checkpoint","w")
+			checkpoint.write("model_checkpoint_path: \""+fname+"\"")
+			checkpoint.close()
+			logger.write("Checkpoint written")
+			log_dir = args.log_dir+fname[11:]+"/"
+			if not os.path.exists(log_dir):
+				logger.write("Created directory")
+				os.makedirs(log_dir)
+			for x in range(3):
+				logger.write("Running sampling")
+				args.iteration = x
+				sample_model(args,logger, add_info=False,model=model,save_path=log_dir)
+				x = x+1	
+	else:
+		logger.write("No saved models detected.")
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
