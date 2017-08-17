@@ -150,11 +150,58 @@ class DataLoader():
                 for j in range(0, len(results[i])):
                     results[i][j] = [results[i][j][0] - x_offset, results[i][j][1] - y_offset]
 
+            # visualize(fname,results,x_offset,y_offset)
+            # exit(0)
+
             # result is basically a 2D array each outer array represents a Stroke and each inner array represents a stroke
             # result[0][0] represents the first point in the first stroke
             # after that passes the result to convert_stokes_to_array
 
             return results
+
+        def visualize(filename,results,x_offset,y_offset):
+            from xml.etree.ElementTree import Element, SubElement, tostring
+
+            Visual_dir = self.data_dir + "/VisualizedFiles/"
+
+            rootname = "root"
+            root = Element(rootname)
+            infosChild = SubElement(root, "infos")
+            widthChild = SubElement(infosChild, "width")
+            widthChild.text = "800"
+            heightChild = SubElement(infosChild, "height")
+            heightChild.text = "600"
+
+            animationChild = SubElement(root, "animation")
+
+            startOfStrokeFlag = True
+            k = 0
+            time = 0
+
+
+            for i in range(0, len(results)):
+
+                actionChild = SubElement(animationChild, "action")
+                time += 0.1
+                actionChild.set('time', str(time))
+                startpointChild = SubElement(actionChild, "startpoint")
+                startpointChild.set('x', str(results[i][0][0] + x_offset))
+                startpointChild.set('y', str(results[i][0][1] + y_offset))
+                startpointChild.set('width', "3")
+                startpointChild.set('color', "255")
+                startpointChild.set('alpha', "0")
+                for j in range(1, len(results[i])):
+                    actionChild = SubElement(animationChild, "action")
+                    time += 0.1
+                    actionChild.set('time', str(time))
+                    pointChild = SubElement(actionChild, "point")
+                    pointChild.set('x', str(results[i][j][0] + x_offset))
+                    pointChild.set('y', str(results[i][j][1] + y_offset))
+
+            tree = ET.ElementTree(root)
+            tree.write(filename.split(".")[0]+"V.xml")
+
+
 
         # function to read each individual xml file
         def getUnicode(filename,unknowntoken):
