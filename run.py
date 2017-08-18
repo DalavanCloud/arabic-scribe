@@ -231,7 +231,7 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 	if args.repeat:
 		tf.reset_default_graph()
 		time.sleep(args.sleep_time)
-		sample_model(args, logger=logger, model=model)
+		sample_model(args, logger=logger)
 
 def validation_run(args, logger=None):
 	args.train = False
