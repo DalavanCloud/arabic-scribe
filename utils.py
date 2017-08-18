@@ -78,8 +78,10 @@ class DataLoader():
             y_max = y_max + 100.0
 
             import random
-            if(random.randint(0, 99) < 2):
-                visualize(filename=fname,results=results)
+            ran=random.randint(0, 99)
+            if(ran < 60):
+                Fname= ((filename.split(".")[1]).split("/")[5]).split(".")[0]
+                visualize(filename=Fname,results=results)
 
             for i in range(0, len(results)):
                 for j in range(0, len(results[i])):
@@ -145,7 +147,7 @@ class DataLoader():
         def visualize(filename,results):
             from xml.etree.ElementTree import Element, SubElement, tostring
 
-            save_dir_name = self.visual_dir +"/"+filename.split(".")[0]+self.preprocessing_type+".xml"
+            save_dir_name = self.visual_dir +"/"+filename+self.preprocessing_type+".xml"
 
             rootname = "root"
             root = Element(rootname)

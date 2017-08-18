@@ -54,7 +54,7 @@ def main():
 
 
 	#book-keeping
-	parser.add_argument('--visual_dir', type=str, default='./visualizedFiles', help='location, relative to execution, of visualization')
+	parser.add_argument('--visual_dir', type=str, default='./VisualizedFiles', help='location, relative to execution, of visualization')
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
 	parser.add_argument('--log_dir', type=str, default='./logs/', help='location, relative to execution, of log files')
 	parser.add_argument('--valid_dir', type=str, default='./valid/', help='location, relative to execution, of validation output files')
@@ -206,9 +206,9 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 			# g_save_path = u'{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
 			# l_save_path = u'{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
 			if (add_info):
-				w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-				g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-				l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
+				w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, (s[:10].replace(' ', '_')).encode("UTF-8"))
+				g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, (s[:10].replace(' ', '_')).encode("UTF-8"))
+				l_save_path = '{}figures/iter-{}-l-{}.png'.format(save_path, global_step, (s[:10].replace(' ', '_')).encode("UTF-8"))
 
 
 			elif (args.test_epochs):
@@ -260,10 +260,13 @@ def validation_run(args, logger=None):
 
 
 def test_epochs(args, logger=None):
+	checkpoint = open("./saved/checkpoint", "r")
+	OldCheckpoints=checkpoint.readlines()
+	checkpoint.close()
 	args.train = False
 	args.repeat = False
 	if args.text == '':
-		args.text = [u'لو',u'ليا',u'بئر',u'محمود',u'نورهان',u'عمرو',u'سلام']
+		args.text = [u'لو',u'ليا',u'بئر',u'محمود',u'نورهان',u'عمرو',u'سلام',u'كريم',u'اب']
 	logger = Logger(args) if logger is None else logger # instantiate logger, if None
 	logger.write("\nTESTING MODE LAUNCHED")
 
@@ -282,6 +285,7 @@ def test_epochs(args, logger=None):
 		logger.write("Finished detecting saved models")
 		logger.write("Building model")
 		model = Model(args, logger)
+
 		for fname in filelist:
 			logger.write("Processing Model: "+fname)
 			checkpoint = open("./saved/checkpoint","w")
@@ -299,6 +303,10 @@ def test_epochs(args, logger=None):
 				x = x+1
 	else:
 		logger.write("No saved models detected.")
+	checkpoint = open("./saved/checkpoint", "w")
+	for i in range(len(OldCheckpoints)):
+	 	checkpoint.write(OldCheckpoints[i])
+	checkpoint.close()
 
 
 if __name__ == '__main__':

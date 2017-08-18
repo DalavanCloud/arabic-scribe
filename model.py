@@ -245,7 +245,7 @@ class Model():
 
 		# ----- some TensorFlow I/O
 		self.sess = tf.InteractiveSession()
-		self.saver = tf.train.Saver(tf.global_variables())
+		self.saver = tf.train.Saver(tf.global_variables(),max_to_keep=251)
 		self.sess.run(tf.global_variables_initializer())
 
 		# ----- for restoring previous models
