@@ -118,10 +118,6 @@ def train_model(args):
 	for i in range(len(vars1)):
 		if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
 			model.sess.run(tf.assign(vars2[i], vars1[i].eval(session=model.sess)))
-	attrs = dir(model.worker_model)
-	for i in len(attrs):
-		print(attrs[i])
-		print(getattr(model.worker_model, attrs[i]) == getattr(model.ps_model, attrs[i]))
 	logger.write("Mini-Models synced...")
 	# Global_steps is the number indented at the end of the file
 	# Nepochs is the number the training occurs 
@@ -153,17 +149,18 @@ def train_model(args):
 					model.worker_model.istate_cell0.c: c0, model.worker_model.istate_cell1.c: c1, model.worker_model.istate_cell2.c: c2, \
 					model.worker_model.istate_cell0.h: h0, model.worker_model.istate_cell1.h: h1, model.worker_model.istate_cell2.h: h2 }
 
-			[train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
-			print("losses : ")
-			print(train_loss)
-			print(worker_loss)
-			for i in range(len(vars1)):
-				if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
-					print("Not equal")
+			# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
+			[_] = model.sess.run([model.train_op], feed)
+			# for i in range(len(vars1)):
+			# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
+			# 		print("Not equal")
 			feed.update(valid_inputs)
 			feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
 			feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-			[valid_loss, worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
+			[valid_loss, train_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
+			print("losses : ")
+			print(valid_loss)
+			print(train_loss)
 			running_average = running_average*remember_rate + train_loss*(1-remember_rate)
 
 			end = time.time()
