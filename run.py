@@ -107,7 +107,8 @@ def train_model(args):
 	# v_y ==> y_batch (Which is the next point after the x_batch)
 	# v_c ==> One_hot sequence
 	# Target_data ==> This is the next point to be predicted
-	valid_inputs = {model.ps_model.input_data: v_x, model.ps_model.target_data: v_y, model.ps_model.char_seq: v_c}
+	valid_inputs = {model.ps_model.input_data: v_x, model.ps_model.target_data: v_y, model.ps_model.char_seq: v_c,
+			model.worker_model.input_data:v_x, model.worker_model.target_data: v_y, model.worker_model.char_seq: v_c}
 
 	model.sess.run(model.assign_momentum)
 	model.sess.run(model.assign_decay)
@@ -150,22 +151,20 @@ def train_model(args):
 					model.worker_model.istate_cell0.h: h0, model.worker_model.istate_cell1.h: h1, model.worker_model.istate_cell2.h: h2 }
 
 			# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
-			[_] = model.sess.run([model.train_op], feed)
+			[train_loss, worker_train_loss, _, _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op, model.train_op2], feed)
 			# for i in range(len(vars1)):
 			# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
 			# 		print("Not equal")
 			feed.update(valid_inputs)
 			feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
 			feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-			[valid_loss, train_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
-			print("losses : ")
-			print(valid_loss)
-			print(train_loss)
+			[valid_loss, valid_worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
 			running_average = running_average*remember_rate + train_loss*(1-remember_rate)
 
 			end = time.time()
-			if i % 10 is 0: logger.write("{}/{}, loss = {:.3f}, regloss = {:.5f}, valid_loss = {:.3f}, time = {:.3f}" \
-				.format(i, args.nepochs * args.nbatches, train_loss, running_average, valid_loss, end - start) )
+			if i % 10 is 0:
+				logger.write("{}/{}, loss = {:.3f}, wloss = {:.3f} regloss = {:.5f}, valid_loss = {:.3f}, valid_w_loss = {:.3f}, time = {:.3f}" \
+				.format(i, args.nepochs * args.nbatches, train_loss, worker_train_loss, running_average, valid_loss, valid_worker_loss, end - start) )
 	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
 	data_loader.save_pointer()
 

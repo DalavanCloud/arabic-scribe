@@ -52,14 +52,13 @@ class Model():
 			with tf.variable_scope('worker',reuse=False):
 				self.worker_model = Real_Model(args, logger)
 			worker_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
-			worker_vars = worker_vars[len(worker_vars)/2:]
-			worker_gradients = tf.gradients(self.worker_model.cost, worker_vars)
+			worker_vars_grad = worker_vars[len(worker_vars)/2:]
+			worker_gradients = tf.gradients(self.worker_model.cost, worker_vars_grad)
 		with tf.variable_scope('master',reuse=False):
 			self.ps_model = Real_Model(args, logger)
 		ps_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
-		ps_vars = ps_vars[0 : len(ps_vars)/2]
-		ps_gradients = tf.gradients(self.ps_model.cost, ps_vars)
-		tvars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
+		ps_vars_grad = ps_vars[0 : len(ps_vars)/2]
+		ps_gradients = tf.gradients(self.ps_model.cost, ps_vars_grad)
 		# ----- bring together all variables and prepare for training
 		
 		self.learning_rate = tf.Variable(0.0, trainable=False)
@@ -76,8 +75,18 @@ class Model():
 			self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
 		else:
 			raise ValueError("Optimizer type not recognized")
-		self.train_op = self.optimizer.apply_gradients(zip(grads, tvars))
+		self.train_op = self.optimizer.apply_gradients(zip(grads, ps_vars))
 
+		with tf.device("/cpu:0"):
+			gradients2 = ps_gradients + worker_gradients
+			grads2, _ = tf.clip_by_global_norm(gradients2, self.grad_clip)
+			if args.optimizer == 'adam':
+				self.optimizer2 = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+			elif args.optimizer == 'rmsprop':
+				self.optimizer2 = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
+			else:
+				raise ValueError("Optimizer type not recognized")
+			self.train_op2 = self.optimizer2.apply_gradients(zip(grads2, worker_vars))
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
