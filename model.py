@@ -39,13 +39,13 @@ class Model():
 
 
 		# Distribution
-		# self.ps_hosts = args.ps_hosts.split(",")
-		# self.worker_hosts = args.worker_hosts.split(",")
-		# self.job_name = args.job_name
-		# self.task_index = args.task_index
+		self.ps_hosts = args.ps_hosts.split(",")
+		self.worker_hosts = args.worker_hosts.split(",")
+		self.job_name = args.job_name
+		self.task_index = args.task_index
 
-		# cluster = args.cluster
-		# server = args.server
+		cluster = args.cluster
+		server = args.server
 
 		# with tf.device("/job:worker/task:0/gpu:0"):
 		with tf.device("/job:worker/task:0/gpu:0"):
