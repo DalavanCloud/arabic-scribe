@@ -78,15 +78,15 @@ class Model():
 		self.train_op = self.optimizer.apply_gradients(zip(grads, ps_vars))
 
 		with tf.device("/job:worker/task:0/gpu:0"):
-			gradients2 = ps_gradients + worker_gradients
-			grads2, _ = tf.clip_by_global_norm(gradients2, self.grad_clip)
+			# gradients2 = ps_gradients + worker_gradients
+			# grads2, _ = tf.clip_by_global_norm(gradients2, self.grad_clip)
 			if args.optimizer == 'adam':
 				self.optimizer2 = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
 			elif args.optimizer == 'rmsprop':
 				self.optimizer2 = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate, decay=self.decay, momentum=self.momentum)
 			else:
 				raise ValueError("Optimizer type not recognized")
-			self.train_op2 = self.optimizer2.apply_gradients(zip(grads2, worker_vars))
+			self.train_op2 = self.optimizer2.apply_gradients(zip(grads, worker_vars))
 		self.train_ops = tf.group(*[self.train_op, self.train_op2])
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
