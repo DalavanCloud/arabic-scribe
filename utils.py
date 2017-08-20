@@ -141,9 +141,6 @@ class DataLoader():
                     results.append(pointslist)
             return results
 
-
-
-
         def visualize(filename,results):
             from xml.etree.ElementTree import Element, SubElement, tostring
 
@@ -185,27 +182,25 @@ class DataLoader():
             tree.write(save_dir_name)
 
 
-
         # function to read each individual xml file
         def getUnicode(filename,unknowntoken):
             # Gets the Word as Unicode
             indexs = []
             tree = ET.parse(filename)
             root = tree.getroot()
-            shapedUnicode = root[2][0][0][0].get('value')
-            unshapedUnicode = arabic_reshaper.reshape(shapedUnicode)
+            unshapedUnicode = root[2][0][0][0].get('value')
+            shapedUnicode = arabic_reshaper.reshape(unshapedUnicode)
             if(len(shapedUnicode)!= len(unshapedUnicode)):
-                chars = list(shapedUnicode)
+                chars = list(unshapedUnicode)
                 for index, char in enumerate(chars):
                     if (not unknowntoken.__contains__(char)):
                         indexs.append(index)
             else:
-                return unshapedUnicode
+                return shapedUnicode
 
             for index in indexs:
-                unshapedUnicode = unshapedUnicode[:index] + shapedUnicode[index] + unshapedUnicode[index:]
-
-            return unshapedUnicode
+                shapedUnicode = shapedUnicode[:index] + unshapedUnicode[index] + shapedUnicode[index:]
+            return shapedUnicode
 
 
         # converts a list of arrays into a 2d numpy int16 array
@@ -385,6 +380,7 @@ class DataLoader():
                 # if(data.all() != np.minimum(data, self.limit).all() or data.all() != np.maximum(data, -self.limit).all()):
                 #     c += 1
 
+
                 data = np.minimum(data, self.limit)
                 data = np.maximum(data, -self.limit)
                 data = np.array(data,dtype=np.float32)
@@ -395,9 +391,9 @@ class DataLoader():
 
                 # Takes one of every 20 xml files and adds them to the validation set
                 if cur_data_counter % 20 == 0:
-                  self.valid_stroke_data.append(data)
-                  ascii = validationRegex.sub("", self.raw_ascii_data[i])
-                  self.valid_ascii_data.append(ascii)
+                    self.valid_stroke_data.append(data)
+                    ascii = validationRegex.sub("", self.raw_ascii_data[i])
+                    self.valid_ascii_data.append(ascii)
                 else:
                     self.stroke_data.append(data)
                     self.ascii_data.append(ascii)
