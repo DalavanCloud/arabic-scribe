@@ -67,6 +67,7 @@ def main():
 	parser.add_argument('--sleep_time', type=int, default=60*5, help='time to sleep between running sampler')
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
 	parser.add_argument('--no_info', dest='add_info', action='store_false', help='adds additional info')
+	parser.add_argument('--aggMode', type=int, default=3, help='Sampling with which mini model or averaging them then sampling')
 
 
 	parser.set_defaults(repeat=False)
@@ -199,7 +200,12 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 			strokes, phis, windows, kappas = [], [], [], []
 			prev_x = 0
 			for word in words:
-				strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model, args)
+				if (args.aggMode == 1):
+					strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model.ps_model, args, model.sess)
+				elif (args.aggMode == 2):
+					strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model.worker_model, args, model.sess)
+				else:
+					strokes_temp, phis_temp, windows_temp, kappas_temp = aggregateSampling(word, model, args, logger)
 				mod_strokes = np.asarray(strokes_temp, dtype = np.float32)
 				mod_strokes[:,0] += prev_x
 				mod_strokes[len(mod_strokes) - 1, 5] = 1

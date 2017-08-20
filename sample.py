@@ -10,9 +10,9 @@ def sample_gaussian2d(mu1, mu2, s1, s2, rho):
     x = np.random.multivariate_normal(mean, cov, 1)
     return x[0][0], x[0][1]
 
-def get_style_states(model, args):
-    c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
-    h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
+def get_style_states(model, args, session):
+    c0, c1, c2 = model.istate_cell0.c.eval(session=session), model.istate_cell1.c.eval(session=session), model.istate_cell2.c.eval(session=session)
+    h0, h1, h2 = model.istate_cell0.h.eval(session=session), model.istate_cell1.h.eval(session=session), model.istate_cell2.h.eval(session=session)
     if args.style is -1: return [c0, c1, c2, h0, h1, h2] #model 'chooses' random style
     # Don't let it reach down here.
     with open(os.path.join(args.data_dir, 'styles.p'),'r') as f:
@@ -32,13 +32,13 @@ def get_style_states(model, args):
         fetch = [model.new_kappa, \
                  model.fstate_cell0.c, model.fstate_cell1.c, model.fstate_cell2.c,
                  model.fstate_cell0.h, model.fstate_cell1.h, model.fstate_cell2.h]
-        [style_kappa, c0, c1, c2, h0, h1, h2] = model.sess.run(fetch, feed)
+        [style_kappa, c0, c1, c2, h0, h1, h2] = session.run(fetch, feed)
     return [c0, c1, c2, np.zeros_like(h0), np.zeros_like(h1), np.zeros_like(h2)] #only the c vectors should be primed
 
-def sample(input_text, model, args):
+def sample(input_text, model, args, session):
     # initialize some parameters
     one_hot = [to_one_hot(input_text, model.ascii_steps, args.alphabet)]         # convert input string to one-hot vector
-    [c0, c1, c2, h0, h1, h2] = get_style_states(model, args) # get numpy zeros states for all three LSTMs
+    [c0, c1, c2, h0, h1, h2] = get_style_states(model, args, session) # get numpy zeros states for all three LSTMs
     kappa = np.zeros((1, args.kmixtures, 1))   # attention mechanism's read head should start at index 0
     prev_x = np.asarray([[[0, 0, 1]]], dtype=np.float32)     # start with a pen stroke at (0,0)
     strokes, pis, windows, phis, kappas = [], [], [], [], [] # the data we're going to generate will go here
@@ -52,7 +52,7 @@ def sample(input_text, model, args):
                  model.fstate_cell0.c, model.fstate_cell1.c, model.fstate_cell2.c,\
                  model.fstate_cell0.h, model.fstate_cell1.h, model.fstate_cell2.h]
         [pi_hat, mu1, mu2, sigma1_hat, sigma2_hat, rho, eos, window, phi, kappa, alpha, \
-                 c0, c1, c2, h0, h1, h2] = model.sess.run(fetch, feed)
+                 c0, c1, c2, h0, h1, h2] = session.run(fetch, feed)
         
         #bias stuff:
         sigma1 = np.exp(sigma1_hat - args.bias) ; sigma2 = np.exp(sigma2_hat - args.bias)
@@ -86,7 +86,16 @@ def sample(input_text, model, args):
     # the network predicts the displacements between pen points, so do a running sum over the time dimension
     strokes[:,:2] = np.cumsum(strokes[:,:2], axis=0)
     return strokes, phis, windows, kappas
-
+def aggregateSampling(input_text, model, args, logger):
+    vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
+    vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
+    logger.write("Mini-Models aggregating...")
+    for i in range(len(vars1)):
+        result = np.divide(np.add(vars1[i].eval(session=model.sess), vars2[i].eval(session=model.sess)),2)
+        model.sess.run(tf.assign(vars1[i], result))
+    logger.write("Mini-Models aggregated...")
+    [strokes, phis, windows, kappas] = sample(input_text, model.ps_model, args, model.sess)
+    return strokes, phis, windows, kappas
 
 # plots parameters from the attention mechanism
 def window_plots(phis, windows, save_path='.'):

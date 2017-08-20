@@ -21,6 +21,7 @@ class Model():
 		self.kmixtures = args.kmixtures
 		self.batch_size = args.batch_size if self.train else 1 # training/sampling specific
 		self.tsteps = args.tsteps if self.train else 1 # training/sampling specific
+		self.device = "/job:worker/task:0/gpu:0" if self.train else "/cpu:0"
 		self.alphabet = args.alphabet
 		# training params
 		self.dropout = args.dropout
@@ -39,16 +40,16 @@ class Model():
 
 
 		# Distribution
-		self.ps_hosts = args.ps_hosts.split(",")
-		self.worker_hosts = args.worker_hosts.split(",")
-		self.job_name = args.job_name
-		self.task_index = args.task_index
-
-		cluster = args.cluster
-		server = args.server
+		if self.train:
+			self.ps_hosts = args.ps_hosts.split(",")
+			self.worker_hosts = args.worker_hosts.split(",")
+			self.job_name = args.job_name
+			self.task_index = args.task_index
+			cluster = args.cluster
+			server = args.server
 
 		# with tf.device("/job:worker/task:0/gpu:0"):
-		with tf.device("/job:worker/task:0/gpu:0"):
+		with tf.device(self.device):
 			with tf.variable_scope('worker',reuse=False):
 				self.worker_model = Real_Model(args, logger)
 			worker_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
@@ -77,7 +78,7 @@ class Model():
 			raise ValueError("Optimizer type not recognized")
 		self.train_op = self.optimizer.apply_gradients(zip(grads, ps_vars))
 
-		with tf.device("/job:worker/task:0/gpu:0"):
+		with tf.device(self.device):
 			# gradients2 = ps_gradients + worker_gradients
 			# grads2, _ = tf.clip_by_global_norm(gradients2, self.grad_clip)
 			if args.optimizer == 'adam':
@@ -98,8 +99,10 @@ class Model():
 		# sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
 		config = tf.ConfigProto(allow_soft_placement = True)
 		# self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
-		self.sess = tf.InteractiveSession(server.target, config=config)
-		# self.sess = tf.InteractiveSession(config=config)
+		if (self.train):
+			self.sess = tf.InteractiveSession(server.target, config=config)
+		else:
+			self.sess = tf.InteractiveSession(config=config)
 		self.sess.run(tf.global_variables_initializer())
 
 	# ----- for restoring previous models
