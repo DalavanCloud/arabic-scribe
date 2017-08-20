@@ -87,6 +87,7 @@ class Model():
 			else:
 				raise ValueError("Optimizer type not recognized")
 			self.train_op2 = self.optimizer2.apply_gradients(zip(grads2, worker_vars))
+		self.train_ops = tf.group(*[self.train_op, self.train_op2])
 		# ----- some TensorFlow I/O
 		# Uncomment the following line to know the device used by each operation (GPU or CPU for debugging)
 		# self.sess = tf.InteractiveSession(config=tf.ConfigProto(log_device_placement=True))
