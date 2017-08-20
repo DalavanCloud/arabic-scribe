@@ -48,7 +48,7 @@ class Model():
 		# server = args.server
 
 		# with tf.device("/job:worker/task:0/gpu:0"):
-		with tf.device("/cpu:0"):
+		with tf.device("/job:worker/task:0/gpu:0"):
 			with tf.variable_scope('worker',reuse=False):
 				self.worker_model = Real_Model(args, logger)
 			worker_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
@@ -77,7 +77,7 @@ class Model():
 			raise ValueError("Optimizer type not recognized")
 		self.train_op = self.optimizer.apply_gradients(zip(grads, ps_vars))
 
-		with tf.device("/cpu:0"):
+		with tf.device("/job:worker/task:0/gpu:0"):
 			gradients2 = ps_gradients + worker_gradients
 			grads2, _ = tf.clip_by_global_norm(gradients2, self.grad_clip)
 			if args.optimizer == 'adam':

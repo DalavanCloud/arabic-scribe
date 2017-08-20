@@ -31,11 +31,11 @@ def main():
 	parser.add_argument('--tsteps_per_ascii', type=int, default=24, help='expected number of pen points per character')
 
 	#Distribution parameters
-	# parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
-	# parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
-	# parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
-	# # Flags for defining the tf.train.Server
-	# parser.add_argument("--task_index",type=int,default=0,help="Index of task within the job")
+	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+	parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+	parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
+	# Flags for defining the tf.train.Server
+	parser.add_argument("--task_index",type=int,default=0,help="Index of task within the job")
 
 
 
@@ -87,84 +87,88 @@ def train_model(args):
 	data_loader = DataLoader(args, logger=logger)
 	logger.write("training...")
 	# Preprocessing complete, created a validation set and training set , and got the number of batches.
-	# args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
-	# args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
-	# if(args.job_name=="worker"):
-	# 	logger.write("Joining server...")
-	# 	args.server.join()
-	# 	logger.write("Joined server...")
-	# else:
-	logger.write("building model...")
-	model = Model(args, logger=logger)
+	args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
+	args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
+	if(args.job_name=="worker"):
+		logger.write("Joining server...")
+		args.server.join()
+		logger.write("Joined server...")
+	else:
+		logger.write("building model...")
+		model = Model(args, logger=logger)
 
-	logger.write("attempt to load saved model...")
-	load_was_success, global_step = model.try_load_model(args.save_path)
+		logger.write("attempt to load saved model...")
+		load_was_success, global_step = model.try_load_model(args.save_path)
 
-	# Validates data once, which validates only 32 lines out of the entire validation set
-	v_x, v_y, v_s, v_c = data_loader.validation_data()
-	# INPUTS data to the model
-	# V_X ==> x_batch 
-	# v_y ==> y_batch (Which is the next point after the x_batch)
-	# v_c ==> One_hot sequence
-	# Target_data ==> This is the next point to be predicted
-	valid_inputs = {model.ps_model.input_data: v_x, model.ps_model.target_data: v_y, model.ps_model.char_seq: v_c,
-			model.worker_model.input_data:v_x, model.worker_model.target_data: v_y, model.worker_model.char_seq: v_c}
+		# Validates data once, which validates only 32 lines out of the entire validation set
+		v_x, v_y, v_s, v_c = data_loader.validation_data()
+		# INPUTS data to the model
+		# V_X ==> x_batch 
+		# v_y ==> y_batch (Which is the next point after the x_batch)
+		# v_c ==> One_hot sequence
+		# Target_data ==> This is the next point to be predicted
+		valid_inputs = {model.ps_model.input_data: v_x, model.ps_model.target_data: v_y, model.ps_model.char_seq: v_c,
+				model.worker_model.input_data:v_x, model.worker_model.target_data: v_y, model.worker_model.char_seq: v_c}
 
-	model.sess.run(model.assign_momentum)
-	model.sess.run(model.assign_decay)
-	running_average = 0.0 ; remember_rate = 0.99
-	logger.write("Syncing mini models...")
-	vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
-	vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
-	for i in range(len(vars1)):
-		if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
-			model.sess.run(tf.assign(vars2[i], vars1[i].eval(session=model.sess)))
-	logger.write("Mini-Models synced...")
-	# Global_steps is the number indented at the end of the file
-	# Nepochs is the number the training occurs 
-	# nBatches is the number of the batches
-	for e in range(global_step/args.nbatches, args.nepochs):
-		model.sess.run(model.assign_learning_rate)
-		# logger.write("learning rate: {}".format(model.learning_rate.eval()))
-		logger.write("Learning rate")
+		model.sess.run(model.assign_momentum)
+		model.sess.run(model.assign_decay)
+		running_average = 0.0 ; remember_rate = 0.99
+		logger.write("Syncing mini models...")
+		vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
+		vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
+		for i in range(len(vars1)):
+			if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
+				model.sess.run(tf.assign(vars2[i], vars1[i].eval(session=model.sess)))
+		logger.write("Mini-Models synced...")
+		# Global_steps is the number indented at the end of the file
+		# Nepochs is the number the training occurs 
+		# nBatches is the number of the batches
+		for e in range(global_step/args.nbatches, args.nepochs):
+			model.sess.run(model.assign_learning_rate)
+			# logger.write("learning rate: {}".format(model.learning_rate.eval()))
+			logger.write("Learning rate")
 
-		c0, c1, c2 = model.ps_model.istate_cell0.c.eval(session=model.sess), model.ps_model.istate_cell1.c.eval(session=model.sess), model.ps_model.istate_cell2.c.eval(session=model.sess)
-		h0, h1, h2 = model.ps_model.istate_cell0.h.eval(session=model.sess), model.ps_model.istate_cell1.h.eval(session=model.sess), model.ps_model.istate_cell2.h.eval(session=model.sess)
-		kappa = np.zeros((args.batch_size, args.kmixtures, 1))
+			c0, c1, c2 = model.ps_model.istate_cell0.c.eval(session=model.sess), model.ps_model.istate_cell1.c.eval(session=model.sess), model.ps_model.istate_cell2.c.eval(session=model.sess)
+			h0, h1, h2 = model.ps_model.istate_cell0.h.eval(session=model.sess), model.ps_model.istate_cell1.h.eval(session=model.sess), model.ps_model.istate_cell2.h.eval(session=model.sess)
+			kappa = np.zeros((args.batch_size, args.kmixtures, 1))
 
-		for b in range(global_step%args.nbatches, args.nbatches):
-			i = e * args.nbatches + b
-			if global_step is not 0 : i+=1 ; global_step = 0
+			for b in range(global_step%args.nbatches, args.nbatches):
+				i = e * args.nbatches + b
+				if global_step is not 0 : i+=1 ; global_step = 0
 
-			if i % args.save_every == 0 and (i > 0):
-				model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
-				data_loader.save_pointer()
+				if i % args.save_every == 0 and (i > 0):
+					model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
+					data_loader.save_pointer()
 
-			start = time.time()
-			x, y, s, c = data_loader.next_batch()
+				
+				x, y, s, c = data_loader.next_batch()
 
-			feed = {model.ps_model.input_data: x, model.ps_model.target_data: y, model.ps_model.char_seq: c, model.ps_model.init_kappa: kappa, \
-					model.ps_model.istate_cell0.c: c0, model.ps_model.istate_cell1.c: c1, model.ps_model.istate_cell2.c: c2, \
-					model.ps_model.istate_cell0.h: h0, model.ps_model.istate_cell1.h: h1, model.ps_model.istate_cell2.h: h2, \
-					model.worker_model.input_data: x, model.worker_model.target_data: y, model.worker_model.char_seq: c, model.worker_model.init_kappa: kappa, \
-					model.worker_model.istate_cell0.c: c0, model.worker_model.istate_cell1.c: c1, model.worker_model.istate_cell2.c: c2, \
-					model.worker_model.istate_cell0.h: h0, model.worker_model.istate_cell1.h: h1, model.worker_model.istate_cell2.h: h2 }
+				feed = {model.ps_model.input_data: x, model.ps_model.target_data: y, model.ps_model.char_seq: c, model.ps_model.init_kappa: kappa, \
+						model.ps_model.istate_cell0.c: c0, model.ps_model.istate_cell1.c: c1, model.ps_model.istate_cell2.c: c2, \
+						model.ps_model.istate_cell0.h: h0, model.ps_model.istate_cell1.h: h1, model.ps_model.istate_cell2.h: h2, \
+						model.worker_model.input_data: x, model.worker_model.target_data: y, model.worker_model.char_seq: c, model.worker_model.init_kappa: kappa, \
+						model.worker_model.istate_cell0.c: c0, model.worker_model.istate_cell1.c: c1, model.worker_model.istate_cell2.c: c2, \
+						model.worker_model.istate_cell0.h: h0, model.worker_model.istate_cell1.h: h1, model.worker_model.istate_cell2.h: h2 }
 
-			# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
-			[train_loss, worker_train_loss, _, _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op, model.train_op2], feed)
-			# for i in range(len(vars1)):
-			# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
-			# 		print("Not equal")
-			feed.update(valid_inputs)
-			feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-			feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-			[valid_loss, valid_worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
-			running_average = running_average*remember_rate + train_loss*(1-remember_rate)
+				# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
+				start = time.time()
+				# [train_loss, worker_train_loss, _, _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op, model.train_op2], feed)
+				[_, _] = model.sess.run([model.train_op, model.train_op2], feed)			
+				end = time.time()		
+				train_loss, worker_train_loss = 0, 0
+				# for i in range(len(vars1)):
+				# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
+				# 		print("Not equal")
+				feed.update(valid_inputs)
+				feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				[valid_loss, valid_worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
+				running_average = running_average*remember_rate + train_loss*(1-remember_rate)
 
-			end = time.time()
-			if i % 10 is 0:
-				logger.write("{}/{}, loss = {:.3f}, wloss = {:.3f} regloss = {:.5f}, valid_loss = {:.3f}, valid_w_loss = {:.3f}, time = {:.3f}" \
-				.format(i, args.nepochs * args.nbatches, train_loss, worker_train_loss, running_average, valid_loss, valid_worker_loss, end - start) )
+				end = time.time()
+				if i % 10 is 0:
+					logger.write("{}/{}, loss = {:.3f}, wloss = {:.3f} regloss = {:.5f}, valid_loss = {:.3f}, valid_w_loss = {:.3f}, time = {:.3f}" \
+					.format(i, args.nepochs * args.nbatches, train_loss, worker_train_loss, running_average, valid_loss, valid_worker_loss, end - start) )
 	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
 	data_loader.save_pointer()
 
