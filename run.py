@@ -113,13 +113,14 @@ def train_model(args):
 		model.sess.run(model.assign_momentum)
 		model.sess.run(model.assign_decay)
 		running_average = 0.0 ; remember_rate = 0.99
-		logger.write("Syncing mini models...")
-		vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
-		vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
-		for i in range(len(vars1)):
-			if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
-				model.sess.run(tf.assign(vars2[i], vars1[i].eval(session=model.sess)))
-		logger.write("Mini-Models synced...")
+		if not (load_was_success):
+			logger.write("Syncing mini models...")
+			vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
+			vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
+			for i in range(len(vars1)):
+				if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
+					model.sess.run(tf.assign(vars2[i], vars1[i].eval(session=model.sess)))
+			logger.write("Mini-Models synced...")
 		# Global_steps is the number indented at the end of the file
 		# Nepochs is the number the training occurs 
 		# nBatches is the number of the batches
