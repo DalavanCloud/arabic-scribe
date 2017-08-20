@@ -54,7 +54,7 @@ def main():
 
 
 	#book-keeping
-	parser.add_argument('--visual_dir', type=str, default='./VisualizedFiles', help='location, relative to execution, of visualization')
+	parser.add_argument('--visual_dir', type=str, default='./visualizedFiles', help='location, relative to execution, of visualization')
 	parser.add_argument('--data_scale', type=int, default=50, help='amount to scale data down before training')
 	parser.add_argument('--log_dir', type=str, default='./logs/', help='location, relative to execution, of log files')
 	parser.add_argument('--valid_dir', type=str, default='./valid/', help='location, relative to execution, of validation output files')

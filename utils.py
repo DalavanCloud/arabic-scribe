@@ -147,6 +147,9 @@ class DataLoader():
         def visualize(filename,results):
             from xml.etree.ElementTree import Element, SubElement, tostring
 
+            if not os.path.exists(self.visual_dir):
+                os.makedirs(self.visual_dir)
+
             save_dir_name = self.visual_dir +"/"+filename+self.preprocessing_type+".xml"
 
             rootname = "root"
