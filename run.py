@@ -153,8 +153,7 @@ def train_model(args):
 				# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
 				start = time.time()
 				# [train_loss, worker_train_loss, _, _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op, model.train_op2], feed)
-				[_, _] = model.sess.run([model.train_op, model.train_op2], feed)			
-				end = time.time()		
+				[_, _] = model.sess.run([model.train_op, model.train_op2], feed)
 				train_loss, worker_train_loss = 0, 0
 				# for i in range(len(vars1)):
 				# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
