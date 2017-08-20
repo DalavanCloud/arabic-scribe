@@ -96,6 +96,8 @@ class Model():
 		self.assign_momentum = tf.assign(self.momentum, args.momentum )
 		self.assign_learning_rate = tf.assign(self.learning_rate, args.learning_rate)
 		self.saver = tf.train.Saver(tf.global_variables(), max_to_keep = 0)
+		with tf.device(self.device):
+			self.saver2 = tf.train.Saver(tf.global_variables(), max_to_keep = 0)
 		# sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
 		config = tf.ConfigProto(allow_soft_placement = True)
 		# self.sess = sv.prepare_or_wait_for_session(server.target,config=config)

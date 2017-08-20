@@ -139,7 +139,8 @@ def train_model(args):
 				if global_step is not 0 : i+=1 ; global_step = 0
 
 				if i % args.save_every == 0 and (i > 0):
-					model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
+					model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on master')
+					model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
 					data_loader.save_pointer()
 
 				
@@ -167,7 +168,8 @@ def train_model(args):
 				if i % 10 is 0:
 					logger.write("{}/{}, time = {:.3f}" \
 					.format(i, args.nepochs * args.nbatches, end - start) )
-	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
+	model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on master')
+	model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
 	data_loader.save_pointer()
 
 def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
