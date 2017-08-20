@@ -159,11 +159,11 @@ def train_model(args):
 				# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
 				# 		print("Not equal")
 				feed.update(valid_inputs)
-				feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-				feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-				[valid_loss, valid_worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
+				# feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				# feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				# [valid_loss, valid_worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
 				running_average = running_average*remember_rate + train_loss*(1-remember_rate)
-
+				valid_loss, valid_worker_loss = 0, 0
 				end = time.time()
 				if i % 10 is 0:
 					logger.write("{}/{}, loss = {:.3f}, wloss = {:.3f} regloss = {:.5f}, valid_loss = {:.3f}, valid_w_loss = {:.3f}, time = {:.3f}" \
