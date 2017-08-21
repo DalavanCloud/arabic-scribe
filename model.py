@@ -16,12 +16,13 @@ class Model():
 
 		# model params
 		self.rnn_size = args.rnn_size
+		self.dist = args.dist
 		self.train = args.train
 		self.nmixtures = args.nmixtures
 		self.kmixtures = args.kmixtures
 		self.batch_size = args.batch_size if self.train else 1 # training/sampling specific
 		self.tsteps = args.tsteps if self.train else 1 # training/sampling specific
-		self.device = "/job:worker/task:0/gpu:0" if self.train else "/cpu:0"
+		self.device = "/job:worker/task:0/gpu:0" if self.train and self.dist else "/cpu:0"
 		self.alphabet = args.alphabet
 		# training params
 		self.dropout = args.dropout
@@ -40,7 +41,7 @@ class Model():
 
 
 		# Distribution
-		if self.train:
+		if self.train and self.dist:
 			self.ps_hosts = args.ps_hosts.split(",")
 			self.worker_hosts = args.worker_hosts.split(",")
 			self.job_name = args.job_name
@@ -101,7 +102,7 @@ class Model():
 		# sv = tf.train.Supervisor(is_chief=(self.task_index == 0), init_op=tf.global_variables_initializer())
 		config = tf.ConfigProto(allow_soft_placement = True)
 		# self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
-		if (self.train):
+		if (self.train and self.dist):
 			self.sess = tf.InteractiveSession(server.target, config=config)
 		else:
 			self.sess = tf.InteractiveSession(config=config)

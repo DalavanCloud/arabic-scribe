@@ -17,6 +17,7 @@ def main():
 
 	#general model params
 	parser.add_argument('--train', dest='train', action='store_true', help='train the model')
+	parser.add_argument('--nodist', dest='dist', action='store_false', help='run in a non-distributed mode')
 	parser.add_argument('--sample', dest='train', action='store_false', help='sample from the model')
 	parser.add_argument('--validation', dest='validation', action='store_true', help='validation generation from the model')
 	parser.add_argument('--rnn_size', type=int, default=400, help='size of RNN hidden state')
@@ -73,6 +74,7 @@ def main():
 	parser.set_defaults(repeat=False)
 	parser.set_defaults(add_info=True)
 	parser.set_defaults(train=True)
+	parser.set_defaults(dist=True)
 	parser.set_defaults(validation=False)
 	args = parser.parse_args()
 	if (args.validation):
@@ -88,8 +90,9 @@ def train_model(args):
 	data_loader = DataLoader(args, logger=logger)
 	logger.write("training...")
 	# Preprocessing complete, created a validation set and training set , and got the number of batches.
-	args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
-	args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
+	if args.dist:
+		args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
+		args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
 	if(args.job_name=="worker"):
 		logger.write("Joining server...")
 		args.server.join()
@@ -140,7 +143,8 @@ def train_model(args):
 
 				if i % args.save_every == 0 and (i > 0):
 					model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on master')
-					model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
+					if args.dist:
+						model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
 					data_loader.save_pointer()
 
 				
@@ -169,7 +173,8 @@ def train_model(args):
 					logger.write("{}/{}, time = {:.3f}" \
 					.format(i, args.nepochs * args.nbatches, end - start) )
 	model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on master')
-	model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
+	if args.dist:
+		model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
 	data_loader.save_pointer()
 
 def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
