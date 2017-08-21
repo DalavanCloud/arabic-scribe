@@ -14,6 +14,7 @@ from utils import *
 
 class DataLoader():
     def __init__(self, args, logger, limit = 500):
+        self.args = args
         self.preprocessing_type = args.preprocessing_type
         self.visual_dir = args.visual_dir
         self.datasetAnalysis = args.datasetAnalysis
@@ -76,12 +77,11 @@ class DataLoader():
             # Createss a padding
             x_max = x_max + 100.0
             y_max = y_max + 100.0
-
             import random
             ran=random.randint(0, 99)
             if(ran < 2):
                 Fname= ((filename.split(".")[1]).split("/")[5]).split(".")[0]
-                visualize(filename=Fname,results=results)
+                visualize(args=self.args ,filename=Fname,results=results)
 
             for i in range(0, len(results)):
                 for j in range(0, len(results[i])):
@@ -145,45 +145,6 @@ class DataLoader():
                     results.append(pointslist)
             return results
 
-        def visualize(filename,results):
-            from xml.etree.ElementTree import Element, SubElement, tostring
-
-            if not os.path.exists(self.visual_dir):
-                os.makedirs(self.visual_dir)
-
-            save_dir_name = self.visual_dir +"/"+filename+self.preprocessing_type+".xml"
-
-            rootname = "root"
-            root = Element(rootname)
-            infosChild = SubElement(root, "infos")
-            widthChild = SubElement(infosChild, "width")
-            widthChild.text = "800"
-            heightChild = SubElement(infosChild, "height")
-            heightChild.text = "600"
-            animationChild = SubElement(root, "animation")
-
-            time = 0.01
-
-            for i in range(0, len(results)):
-
-                actionChild = SubElement(animationChild, "action")
-                actionChild.set('time', str(time))
-                startpointChild = SubElement(actionChild, "startpoint")
-                startpointChild.set('x', str(results[i][0][0] ))
-                startpointChild.set('y', str(results[i][0][1] ))
-                startpointChild.set('width', "3")
-                startpointChild.set('color', "255")
-                startpointChild.set('alpha', "0")
-                for j in range(1, len(results[i])):
-                    actionChild = SubElement(animationChild, "action")
-                    actionChild.set('time', str(time))
-                    pointChild = SubElement(actionChild, "point")
-                    pointChild.set('x', str(results[i][j][0] ))
-                    pointChild.set('y', str(results[i][j][1] ))
-                    time += 0.01
-
-            tree = ET.ElementTree(root)
-            tree.write(save_dir_name)
 
 
         # function to read each individual xml file
@@ -240,6 +201,7 @@ class DataLoader():
                     if (k == (len(stroke[j]) - 1)):  # end of stroke
                         stroke_data[counter, 2] = 1
                     counter += 1
+
             return stroke_data
 
 
@@ -402,8 +364,6 @@ class DataLoader():
                     self.stroke_data.append(data)
                     self.ascii_data.append(ascii)
 
-
-
         # print
         # print " number of noise",; print c
         # print
@@ -551,6 +511,46 @@ def combine_image_matrixes(original, expansion):
         expansion = mod_arr
         original = np.append(original, expansion, axis = 0)
     return original
+
+def visualize(args,filename, results):
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    if not os.path.exists(args.visual_dir):
+        os.makedirs(args.visual_dir)
+
+    save_dir_name = args.visual_dir + "/" + filename + args.preprocessing_type + ".xml"
+
+    rootname = "root"
+    root = Element(rootname)
+    infosChild = SubElement(root, "infos")
+    widthChild = SubElement(infosChild, "width")
+    widthChild.text = "800"
+    heightChild = SubElement(infosChild, "height")
+    heightChild.text = "600"
+    animationChild = SubElement(root, "animation")
+
+    time = 0.01
+
+    for i in range(0, len(results)):
+
+        actionChild = SubElement(animationChild, "action")
+        actionChild.set('time', str(time))
+        startpointChild = SubElement(actionChild, "startpoint")
+        startpointChild.set('x', str(results[i][0][0]))
+        startpointChild.set('y', str(results[i][0][1]))
+        startpointChild.set('width', "3")
+        startpointChild.set('color', "255")
+        startpointChild.set('alpha', "0")
+        for j in range(1, len(results[i])):
+            actionChild = SubElement(animationChild, "action")
+            actionChild.set('time', str(time))
+            pointChild = SubElement(actionChild, "point")
+            pointChild.set('x', str(results[i][j][0]))
+            pointChild.set('y', str(results[i][j][1]))
+            time += 0.01
+
+    tree = ET.ElementTree(root)
+    tree.write(save_dir_name)
 
 # abstraction for logging
 class Logger():
