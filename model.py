@@ -245,7 +245,7 @@ class Model():
 
 		# ----- some TensorFlow I/O
 		self.sess = tf.InteractiveSession()
-		self.saver = tf.train.Saver(tf.global_variables(),max_to_keep=251)
+		self.saver = tf.train.Saver(tf.global_variables(),max_to_keep=0)
 		self.sess.run(tf.global_variables_initializer())
 
 		# ----- for restoring previous models
@@ -262,6 +262,6 @@ class Model():
 			load_was_success = False
 		else:
 			self.logger.write("loaded model: {}".format(load_path))
-			self.saver = tf.train.Saver(tf.global_variables())
+			self.saver = tf.train.Saver(tf.global_variables(),max_to_keep=0)
 			global_step = int(load_path.split('-')[-1])
 		return load_was_success, global_step
