@@ -79,7 +79,7 @@ class DataLoader():
 
             import random
             ran=random.randint(0, 99)
-            if(ran < 60):
+            if(ran < 2):
                 Fname= ((filename.split(".")[1]).split("/")[5]).split(".")[0]
                 visualize(filename=Fname,results=results)
 
@@ -116,8 +116,11 @@ class DataLoader():
                     if (maxlist and minlist and commonElement):
                         ourIndices.append([i, commonElement[-1]])
 
+                filtered = []
                 NewlistOfStrokes = []
                 for i in range(len(listOfStrokes)):
+                    if(filtered.__contains__(i)):
+                        continue
                     stroke = listOfStrokes[i]
                     if (not any(e[1] == i for e in ourIndices)):
                         NewlistOfStrokes.append(stroke)
@@ -126,7 +129,8 @@ class DataLoader():
                         if (index[1] == i):
                             for j, x in enumerate(stroke[0]):
                                 if (x < maxm[index[0]] + margin and x > maxm[index[0]] - margin):
-                                    NewlistOfStrokes.append([stroke[0][:j + 1], stroke[1][:j + 1]])
+                                    filtered.append(index[0])
+                                    NewlistOfStrokes.append([stroke[0][:j + 2], stroke[1][:j + 2]])
                                     NewlistOfStrokes.append(listOfStrokes[index[0]])
                                     stroke = [stroke[0][j:], stroke[1][j:]]
                                     break
@@ -397,6 +401,8 @@ class DataLoader():
                 else:
                     self.stroke_data.append(data)
                     self.ascii_data.append(ascii)
+
+
 
         # print
         # print " number of noise",; print c
