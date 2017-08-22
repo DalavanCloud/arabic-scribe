@@ -163,6 +163,7 @@ def line_plot(strokes, title, figsize = (20,2), save_path='.', add_info=True):
         plt.axis('off')
     plt.savefig(save_path)
     plt.clf() ; plt.cla()
+    plt.close()
 def calculate_sample_steps(s):
     final_weight = 0
     for i in range(len(s)):
