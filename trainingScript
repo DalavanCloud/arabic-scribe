@@ -8,4 +8,4 @@ mkdir -p logs
 echo "Creating a figures folder if not exists"
 mkdir -p logs/figures
 echo "Now running the run.py file"
-python run.py --train --tsteps 360 --tsteps_per_ascii 24
+python run.py --train

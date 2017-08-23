@@ -10,22 +10,21 @@ def sample_gaussian2d(mu1, mu2, s1, s2, rho):
     x = np.random.multivariate_normal(mean, cov, 1)
     return x[0][0], x[0][1]
 
-def get_style_states(model, args):
-    c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
-    h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
+def get_style_states(model, args, session):
+    c0, c1, c2 = model.istate_cell0.c.eval(session=session), model.istate_cell1.c.eval(session=session), model.istate_cell2.c.eval(session=session)
+    h0, h1, h2 = model.istate_cell0.h.eval(session=session), model.istate_cell1.h.eval(session=session), model.istate_cell2.h.eval(session=session)
     if args.style is -1: return [c0, c1, c2, h0, h1, h2] #model 'chooses' random style
     # Don't let it reach down here.
     with open(os.path.join(args.data_dir, 'styles.p'),'r') as f:
         style_strokes, style_strings = pickle.load(f)
-
     style_strokes, style_string = style_strokes[args.style], style_strings[args.style]
+    for char in args.filter:
+		style_string = style_string.replace(char,"")
     style_onehot = [to_one_hot(style_string, model.ascii_steps, args.alphabet)]
         
     style_stroke = np.zeros((1, 1, 3), dtype=np.float32)
     style_kappa = np.zeros((1, args.kmixtures, 1))
-    prime_len = 500 # must be <= 700
-    
-    for i in xrange(prime_len):
+    for i in xrange(args.tsteps):
         style_stroke[0][0] = style_strokes[i,:]
         feed = {model.input_data: style_stroke, model.char_seq: style_onehot, model.init_kappa: style_kappa, \
                 model.istate_cell0.c: c0, model.istate_cell1.c: c1, model.istate_cell2.c: c2, \
@@ -33,13 +32,13 @@ def get_style_states(model, args):
         fetch = [model.new_kappa, \
                  model.fstate_cell0.c, model.fstate_cell1.c, model.fstate_cell2.c,
                  model.fstate_cell0.h, model.fstate_cell1.h, model.fstate_cell2.h]
-        [style_kappa, c0, c1, c2, h0, h1, h2] = model.sess.run(fetch, feed)
+        [style_kappa, c0, c1, c2, h0, h1, h2] = session.run(fetch, feed)
     return [c0, c1, c2, np.zeros_like(h0), np.zeros_like(h1), np.zeros_like(h2)] #only the c vectors should be primed
 
-def sample(input_text, model, args):
+def sample(input_text, model, args, session):
     # initialize some parameters
     one_hot = [to_one_hot(input_text, model.ascii_steps, args.alphabet)]         # convert input string to one-hot vector
-    [c0, c1, c2, h0, h1, h2] = get_style_states(model, args) # get numpy zeros states for all three LSTMs
+    [c0, c1, c2, h0, h1, h2] = get_style_states(model, args, session) # get numpy zeros states for all three LSTMs
     kappa = np.zeros((1, args.kmixtures, 1))   # attention mechanism's read head should start at index 0
     prev_x = np.asarray([[[0, 0, 1]]], dtype=np.float32)     # start with a pen stroke at (0,0)
     strokes, pis, windows, phis, kappas = [], [], [], [], [] # the data we're going to generate will go here
@@ -53,7 +52,7 @@ def sample(input_text, model, args):
                  model.fstate_cell0.c, model.fstate_cell1.c, model.fstate_cell2.c,\
                  model.fstate_cell0.h, model.fstate_cell1.h, model.fstate_cell2.h]
         [pi_hat, mu1, mu2, sigma1_hat, sigma2_hat, rho, eos, window, phi, kappa, alpha, \
-                 c0, c1, c2, h0, h1, h2] = model.sess.run(fetch, feed)
+                 c0, c1, c2, h0, h1, h2] = session.run(fetch, feed)
         
         #bias stuff:
         sigma1 = np.exp(sigma1_hat - args.bias) ; sigma2 = np.exp(sigma2_hat - args.bias)
@@ -71,9 +70,10 @@ def sample(input_text, model, args):
         kappas.append(kappa[0].T)
         pis.append(pi[0])
         strokes.append([mu1[0][idx], mu2[0][idx], sigma1[0][idx], sigma2[0][idx], rho[0][idx], eos])
+        main_kappa_idx = np.where(alpha[0]==np.max(alpha[0]))[0];
         # test if finished (has the read head seen the whole ascii sequence?)
-        finished = True if (kappa[0][0] > len(input_text) and alpha[0][0] > 1) \
-            or kappa[0][0] > len(input_text) + 1 else False
+        finished = True if (kappa[0][main_kappa_idx] > len(input_text) and alpha[0][main_kappa_idx] > 1) \
+            or kappa[0][main_kappa_idx] > len(input_text) + 1 else False
         # new input is previous output
         prev_x[0][0] = np.array([x1, x2, eos], dtype=np.float32)
         i+=1
@@ -86,7 +86,16 @@ def sample(input_text, model, args):
     # the network predicts the displacements between pen points, so do a running sum over the time dimension
     strokes[:,:2] = np.cumsum(strokes[:,:2], axis=0)
     return strokes, phis, windows, kappas
-
+def aggregateSampling(input_text, model, args, logger):
+    vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
+    vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
+    logger.write("Mini-Models aggregating...")
+    for i in range(len(vars1)):
+        result = np.divide(np.add(vars1[i].eval(session=model.sess), vars2[i].eval(session=model.sess)),2)
+        model.sess.run(tf.assign(vars1[i], result))
+    logger.write("Mini-Models aggregated...")
+    [strokes, phis, windows, kappas] = sample(input_text, model.ps_model, args, model.sess)
+    return strokes, phis, windows, kappas
 
 # plots parameters from the attention mechanism
 def window_plots(phis, windows, save_path='.'):
@@ -154,14 +163,5 @@ def line_plot(strokes, title, figsize = (20,2), save_path='.', add_info=True):
         plt.axis('off')
     plt.savefig(save_path)
     plt.clf() ; plt.cla()
-
-# def calculate_sample_steps(s):
-#     final_weight = 0
-#     for i in range(len(s)):
-#         if CHARACTER_WEIGHT_MAP.has_key(s[i]):
-#             final_weight += CHARACTER_WEIGHT_MAP[s[i]]
-#         else:
-#             final_weight += 40
-#     final_weight += random.randint(6,15)
-#     return final_weight
+    plt.close()
 

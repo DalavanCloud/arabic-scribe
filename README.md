@@ -2,19 +2,6 @@ Scribe: Realistic Handwriting in Tensorflow
 =======
 See [original project](https://github.com/greydanus/scribe)
 
-Changes to optimize and pretrained model:
------------------------------------------
-1. Remove spaces from ascii before training.
-2. Saves permutation to only reset it after it only completed on it.
-3. Changes to the tsteps and tsteps_per_ascii so we take 15 characters with each one taking 24.
-4. Save permutation to a file to load from if we didn't finish and load pointer too.
-5. Sampling calculates tsteps from the length of the passed character.
-6. Our own pretrained model on these changes and real life samples.
-7. Correcting some links from original project readme.
-8. Sampling lines with spaces.
-9. More details about next trials in TODO.md.
-10. Naive implementation of dynamic sampling input tsteps calculation.
-11. Validation mode added to ouput the sampling result of all the validation set.
 
 Samples
 --------
@@ -56,8 +43,11 @@ The model at one time step looks like this
 Unrolling in time, we get
 ![Unrolled model](static/model_unrolled.png?raw=true)
 
-The model was trained with tsteps 360, tsteps_per_ascii 26. During sampling sometimes changing the tsteps_per_ascii to lower numbers or higher numbers allows the sampling to be done better. More info about are samples are provided at the end. A dynamic weight calculator for each letter can be made to be able to calculate the tsteps in sampling and the tsteps_per_ascii more dynamically by checking how many points does each letter in the sample text need.
-
+Distributed graves model on two machines. TO run the training :
+On the first machine :
+>> python run.py --train --ps_hosts=<your first machine ip> --worker_hosts=<your second machine ip> --task_index=0 --job_name=ps
+On the second machine :
+>> python run.py --train --ps_hosts=<your first machine ip> --worker_hosts=<your second machine ip> --task_index=0 --job_name=worker
 
 Dependencies
 --------

@@ -1,10 +1,12 @@
 *.pyc
 figures/
 logs/
-data/ascii/
-data/lineStrokes
 .idea/
-arabicData/Data/
 logs/dataset_Info.txt
 saved/
 visualizedFiles/
+scribe-demo/
+saved/
+data/
+arabicData/
+

@@ -23,20 +23,29 @@ def main():
 
 	#general model params
 	parser.add_argument('--train', dest='train', action='store_true', help='train the model')
+	parser.add_argument('--nodist', dest='dist', action='store_false', help='run in a non-distributed mode')
 	parser.add_argument('--sample', dest='train', action='store_false', help='sample from the model')
 	parser.add_argument('--validation', dest='validation', action='store_true', help='validation generation from the model')
-	parser.add_argument('--rnn_size', type=int, default=100, help='size of RNN hidden state')
-	parser.add_argument('--tsteps', type=int, default=231, help='RNN time steps (for backprop)')
-	parser.add_argument('--nmixtures', type=int, default=8, help='number of gaussian mixtures')
-
 	# window params
-	parser.add_argument('--kmixtures', type=int, default=1, help='number of gaussian mixtures for character window')
 	parser.add_argument('--alphabet', type=unicode, default=shapedArabicAlphabet, \
 						help='default is shaped unicode of arabic alphabet and <UNK> tag')
 	parser.add_argument('--unknowntoken', type=unicode, default=unshapedArabicAlphabet, \
 						help='default is unshaped unicode of arabic alphabet and any other unicode charcter will be treated as unknown token')
 	parser.add_argument('--filter', type=str, default=u' \r\t\n', help='remove this from ascii before training')
+	parser.add_argument('--rnn_size', type=int, default=400, help='size of RNN hidden state')
+	parser.add_argument('--tsteps', type=int, default=231, help='RNN time steps (for backprop)')
+	parser.add_argument('--nmixtures', type=int, default=20, help='number of gaussian mixtures')
+
+	# window params
+	parser.add_argument('--kmixtures', type=int, default=10, help='number of gaussian mixtures for character window')
 	parser.add_argument('--tsteps_per_ascii', type=int, default=33, help='expected number of pen points per character')
+
+	#Distribution parameters
+	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+	parser.add_argument("--worker_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
+	parser.add_argument("--job_name",type=str,default="",help="One of 'ps', 'worker'")
+	# Flags for defining the tf.train.Server
+	parser.add_argument("--task_index",type=int,default=0,help="Index of task within the job")
 
 	# training params
 	parser.add_argument('--batch_size', type=int, default=32, help='batch size for each gradient step')
@@ -68,6 +77,9 @@ def main():
 	parser.add_argument('--bias', type=float, default=1.0, help='higher bias means neater, lower means more diverse (range is 0-5)')
 	parser.add_argument('--sleep_time', type=int, default=60*5, help='time to sleep between running sampler')
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
+	parser.add_argument('--no_info', dest='add_info', action='store_false', help='adds additional info')
+	parser.add_argument('--aggMode', type=int, default=3, help='Sampling with which mini model or averaging them then sampling')
+	parser.add_argument('--test_epochs', dest='test_epochs', action='store_true',help='If true, tests all the the different epochs')
 
 	#preprocessing
 	parser.add_argument('--preprocessing_type', type=str, default='dotsRepositioned', help='reposition strokes of dots, relative to thier x coordinates, of dataset')
@@ -76,9 +88,12 @@ def main():
 	parser.add_argument('--test_epochs', dest='test_epochs', action='store_true',
 						help='If true, tests all the the different epochs')
 
+
 	parser.set_defaults(test_epochs=False)
 	parser.set_defaults(repeat=False)
+	parser.set_defaults(add_info=True)
 	parser.set_defaults(train=True)
+	parser.set_defaults(dist=True)
 	parser.set_defaults(validation=False)
 	parser.set_defaults(datasetAnalysis=False)
 	args = parser.parse_args()
@@ -86,9 +101,8 @@ def main():
 		validation_run(args)
 	elif (args.test_epochs):
 		test_epochs(args)
-
 	else:
-		train_model(args) if args.train else sample_model(args)
+		train_model(args) if args.train else sample_model(args, add_info=args.add_info)
 
 def train_model(args):
 	logger = Logger(args) # make logging utility
@@ -96,65 +110,93 @@ def train_model(args):
 	logger.write("{}\n".format(args))
 	logger.write("loading data...")
 	data_loader = DataLoader(args, logger=logger)
-	# Preprocessing complete, created a validation set and training set , and got the number of batches.
-
-	logger.write("building model...")
-	model = Model(args, logger=logger)
-
-	logger.write("attempt to load saved model...")
-	load_was_success, global_step = model.try_load_model(args.save_path)
-
-	# Validates data once, which validates only 32 lines out of the entire validation set
-	v_x, v_y, v_s, v_c = data_loader.validation_data()
-	# INPUTS data to the model
-	# V_X ==> x_batch 
-	# v_y ==> y_batch (Which is the next point after the x_batch)
-	# v_c ==> One_hot sequence
-	# Target_data ==> This is the next point to be predicted
-	valid_inputs = {model.input_data: v_x, model.target_data: v_y, model.char_seq: v_c}
-
 	logger.write("training...")
-	model.sess.run(tf.assign(model.decay, args.decay ))
-	model.sess.run(tf.assign(model.momentum, args.momentum ))
-	running_average = 0.0 ; remember_rate = 0.99
+	# Preprocessing complete, created a validation set and training set , and got the number of batches.
+	if args.dist:
+		args.cluster = tf.train.ClusterSpec({"ps": args.ps_hosts.split(","), "worker": args.worker_hosts.split(",")})
+		args.server = tf.train.Server(args.cluster,job_name=args.job_name,task_index=args.task_index)
+	if(args.job_name=="worker"):
+		logger.write("Joining server...")
+		args.server.join()
+		logger.write("Joined server...")
+	else:
+		logger.write("building model...")
+		model = Model(args, logger=logger)
 
-	# Global_steps is the number indented at the end of the file
-	# Nepochs is the number the training occurs 
-	# nBatches is the number of the batches
-	for e in range(global_step/args.nbatches, args.nepochs):
-		model.sess.run(tf.assign(model.learning_rate, args.learning_rate * (args.lr_decay ** e)))
-		logger.write("learning rate: {}".format(model.learning_rate.eval()))
+		logger.write("attempt to load saved model...")
+		load_was_success, global_step = model.try_load_model(args.save_path)
 
-		c0, c1, c2 = model.istate_cell0.c.eval(), model.istate_cell1.c.eval(), model.istate_cell2.c.eval()
-		h0, h1, h2 = model.istate_cell0.h.eval(), model.istate_cell1.h.eval(), model.istate_cell2.h.eval()
-		kappa = np.zeros((args.batch_size, args.kmixtures, 1))
+		# Validates data once, which validates only 32 lines out of the entire validation set
+		v_x, v_y, v_s, v_c = data_loader.validation_data()
+		# INPUTS data to the model
+		# V_X ==> x_batch 
+		# v_y ==> y_batch (Which is the next point after the x_batch)
+		# v_c ==> One_hot sequence
+		# Target_data ==> This is the next point to be predicted
+		valid_inputs = {model.ps_model.input_data: v_x, model.ps_model.target_data: v_y, model.ps_model.char_seq: v_c,
+				model.worker_model.input_data:v_x, model.worker_model.target_data: v_y, model.worker_model.char_seq: v_c}
 
-		for b in range(global_step%args.nbatches, args.nbatches):
-			i = e * args.nbatches + b
-			if global_step is not 0 : i+=1 ; global_step = 0
+		model.sess.run(model.assign_momentum)
+		model.sess.run(model.assign_decay)
+		running_average = 0.0 ; remember_rate = 0.99
+		if not (load_was_success):
+			logger.write("Syncing mini models...")
+			vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='master')
+			vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='worker')
+			for i in range(len(vars1)):
+				if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
+					model.sess.run(tf.assign(vars2[i], vars1[i].eval(session=model.sess)))
+			logger.write("Mini-Models synced...")
+		# Global_steps is the number indented at the end of the file
+		# Nepochs is the number the training occurs 
+		# nBatches is the number of the batches
+		for e in range(global_step/args.nbatches, args.nepochs):
+			model.sess.run(model.assign_learning_rate)
+			# logger.write("learning rate: {}".format(model.learning_rate.eval()))
+			logger.write("Learning rate")
 
-			if i % args.save_every == 0 and (i > 0):
-				model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL')
-				data_loader.save_pointer()
+			c0, c1, c2 = model.ps_model.istate_cell0.c.eval(session=model.sess), model.ps_model.istate_cell1.c.eval(session=model.sess), model.ps_model.istate_cell2.c.eval(session=model.sess)
+			h0, h1, h2 = model.ps_model.istate_cell0.h.eval(session=model.sess), model.ps_model.istate_cell1.h.eval(session=model.sess), model.ps_model.istate_cell2.h.eval(session=model.sess)
+			kappa = np.zeros((args.batch_size, args.kmixtures, 1))
 
-			start = time.time()
-			x, y, s, c = data_loader.next_batch()
+			for b in range(global_step%args.nbatches, args.nbatches):
+				i = e * args.nbatches + b
+				if global_step is not 0 : i+=1 ; global_step = 0
 
-			feed = {model.input_data: x, model.target_data: y, model.char_seq: c, model.init_kappa: kappa, \
-					model.istate_cell0.c: c0, model.istate_cell1.c: c1, model.istate_cell2.c: c2, \
-					model.istate_cell0.h: h0, model.istate_cell1.h: h1, model.istate_cell2.h: h2}
+				if i % args.save_every == 0 and (i > 0):
+					model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on master')
+					if args.dist:
+						model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
+					data_loader.save_pointer()
 
-			[train_loss, _] = model.sess.run([model.cost, model.train_op], feed)
-			feed.update(valid_inputs)
-			feed[model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
-			[valid_loss] = model.sess.run([model.cost], feed)
-			
-			running_average = running_average*remember_rate + train_loss*(1-remember_rate)
+				
+				x, y, s, c = data_loader.next_batch()
 
-			end = time.time()
-			if i % 10 is 0: logger.write("{}/{}, loss = {:.3f}, regloss = {:.5f}, valid_loss = {:.3f}, time = {:.3f}" \
-				.format(i, args.nepochs * args.nbatches, train_loss, running_average, valid_loss, end - start) )
-	model.saver.save(model.sess, args.save_path, global_step = args.nepochs * args.nbatches) ; logger.write('SAVED MODEL')
+				feed = {model.ps_model.input_data: x, model.ps_model.target_data: y, model.ps_model.char_seq: c, model.ps_model.init_kappa: kappa, \
+						model.ps_model.istate_cell0.c: c0, model.ps_model.istate_cell1.c: c1, model.ps_model.istate_cell2.c: c2, \
+						model.ps_model.istate_cell0.h: h0, model.ps_model.istate_cell1.h: h1, model.ps_model.istate_cell2.h: h2, \
+						model.worker_model.input_data: x, model.worker_model.target_data: y, model.worker_model.char_seq: c, model.worker_model.init_kappa: kappa, \
+						model.worker_model.istate_cell0.c: c0, model.worker_model.istate_cell1.c: c1, model.worker_model.istate_cell2.c: c2, \
+						model.worker_model.istate_cell0.h: h0, model.worker_model.istate_cell1.h: h1, model.worker_model.istate_cell2.h: h2 }
+
+				# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
+				start = time.time()
+				# [train_loss, worker_train_loss, _, _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op, model.train_op2], feed)
+				[_] = model.sess.run([model.train_ops], feed)
+				# for i in range(len(vars1)):
+				# 	if (not (np.array_equal(vars1[i].eval(session=model.sess),vars2[i].eval(session=model.sess)))):
+				# 		print("Not equal")
+				# feed.update(valid_inputs)
+				# feed[model.ps_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				# feed[model.worker_model.init_kappa] = np.zeros((args.batch_size, args.kmixtures, 1))
+				# [valid_loss, valid_worker_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
+				end = time.time()
+				if i % 10 is 0:
+					logger.write("{}/{}, time = {:.3f}" \
+					.format(i, args.nepochs * args.nbatches, end - start) )
+	model.saver.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on master')
+	if args.dist:
+		model.saver2.save(model.sess, args.save_path, global_step = i) ; logger.write('SAVED MODEL on worker')
 	data_loader.save_pointer()
 
 def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
@@ -188,7 +230,12 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 			strokes, phis, windows, kappas = [], [], [], []
 			prev_x = 0
 			for word in words:
-				strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model, args)
+				if (args.aggMode == 1):
+					strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model.ps_model, args, model.sess)
+				elif (args.aggMode == 2):
+					strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model.worker_model, args, model.sess)
+				else:
+					strokes_temp, phis_temp, windows_temp, kappas_temp = aggregateSampling(word, model, args, logger)
 				mod_strokes = np.asarray(strokes_temp, dtype = np.float32)
 				mod_strokes[:,0] += prev_x
 				mod_strokes[:,0:2] *= args.data_scale
@@ -202,9 +249,6 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 			phis = np.vstack(phis)
 			kappas = np.vstack(kappas)
 			strokes = np.vstack(strokes)
-			# w_save_path = u'{}figures/iter-{}-w-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-			# g_save_path = u'{}figures/iter-{}-g-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
-			# l_save_path = u'{}figures/iter-{}-l-{}.png'.format(save_path, global_step, s[:10].replace(' ', '_'))
 			if (add_info):
 				w_save_path = '{}figures/iter-{}-w-{}.png'.format(save_path, global_step, (s[:10].replace(' ', '_')).encode("UTF-8"))
 				g_save_path = '{}figures/iter-{}-g-{}.png'.format(save_path, global_step, (s[:10].replace(' ', '_')).encode("UTF-8"))
@@ -259,9 +303,6 @@ def validation_run(args, logger=None):
 
 
 def test_epochs(args, logger=None):
-	checkpoint = open("./saved/checkpoint", "r")
-	OldCheckpoints=checkpoint.readlines()
-	checkpoint.close()
 	args.train = False
 	args.repeat = False
 	if args.text == '':
@@ -284,7 +325,6 @@ def test_epochs(args, logger=None):
 		logger.write("Finished detecting saved models")
 		logger.write("Building model")
 		model = Model(args, logger)
-
 		for fname in filelist:
 			logger.write("Processing Model: "+fname)
 			checkpoint = open("./saved/checkpoint","w")
@@ -295,18 +335,15 @@ def test_epochs(args, logger=None):
 			if not os.path.exists(log_dir):
 				logger.write("Created directory")
 				os.makedirs(log_dir)
-			for x in range(3):
-				logger.write("Running sampling")
-				args.iteration = x
-				sample_model(args,logger, add_info=False,model=model,save_path=log_dir)
-				x = x+1
+			for y in range(1, 4):
+				args.aggMode = y
+				for x in range(5):
+					logger.write("Running sampling")
+					args.iteration = x
+					sample_model(args,logger, add_info=False,model=model,save_path=log_dir)
+					x = x+1	
 	else:
 		logger.write("No saved models detected.")
-	checkpoint = open("./saved/checkpoint", "w")
-	for i in range(len(OldCheckpoints)):
-	 	checkpoint.write(OldCheckpoints[i])
-	checkpoint.close()
-
 
 if __name__ == '__main__':
 	main()
