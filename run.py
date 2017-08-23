@@ -159,8 +159,7 @@ def train_model(args):
 
 def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 	if args.text == '':
-		strings = ['call me ishmael some years ago', 'A project by Sam Greydanus', 'mmm mmm mmm mmm mmm mmm mmm', \
-			'What I cannot create I do not understand', 'You know nothing Jon Snow'] # test strings
+		strings = [u'محمود',u'نورهان',u'عمرو',u'كريم',u'شلبي',u'لو',u'بئر',u'السلام'] # test strings
 	elif args.test_epochs:
 		strings = args.text
 	else:
@@ -192,6 +191,7 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 				strokes_temp, phis_temp, windows_temp, kappas_temp = sample(word, model, args)
 				mod_strokes = np.asarray(strokes_temp, dtype = np.float32)
 				mod_strokes[:,0] += prev_x
+				mod_strokes[:,0:2] *= args.data_scale
 				mod_strokes[len(mod_strokes) - 1, 5] = 1
 				strokes.append(mod_strokes)
 				phis = combine_image_matrixes(phis, phis_temp)
@@ -221,7 +221,6 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 				window_plots(phis, windows, save_path=w_save_path)
 				gauss_plot(strokes, u'Heatmap for "{}"'.format(s[::-1]), figsize = (2*len(s),4), save_path=g_save_path)
 				logger.write( u"kappas: \n{}".format(str(kappas[min(kappas.shape[0]-1, args.tsteps_per_ascii),:])) )
-
 
 			line_plot(strokes, u'Line plot for "{}"'.format(s[::-1]), figsize = (len(s),2), save_path=l_save_path, add_info=add_info)
 			
