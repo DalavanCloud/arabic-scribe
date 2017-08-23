@@ -79,14 +79,12 @@ def main():
 	parser.add_argument('--repeat', dest='repeat', action='store_true', help='repeat sampling infinitly')
 	parser.add_argument('--no_info', dest='add_info', action='store_false', help='adds additional info')
 	parser.add_argument('--aggMode', type=int, default=3, help='Sampling with which mini model or averaging them then sampling')
-	parser.add_argument('--test_epochs', dest='test_epochs', action='store_true',help='If true, tests all the the different epochs')
-
+	
 	#preprocessing
 	parser.add_argument('--preprocessing_type', type=str, default='dotsRepositioned', help='reposition strokes of dots, relative to thier x coordinates, of dataset')
 
     #testing epoch
-	parser.add_argument('--test_epochs', dest='test_epochs', action='store_true',
-						help='If true, tests all the the different epochs')
+	parser.add_argument('--test_epochs', dest='test_epochs', action='store_true', help='If true, tests all the the different epochs')
 
 
 	parser.set_defaults(test_epochs=False)
