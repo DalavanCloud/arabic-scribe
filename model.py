@@ -103,6 +103,7 @@ class Model():
 		config = tf.ConfigProto(allow_soft_placement = True)
 		# self.sess = sv.prepare_or_wait_for_session(server.target,config=config)
 		if (self.train and self.dist):
+			logger.write("Starting distributed server session...")
 			self.sess = tf.InteractiveSession(server.target, config=config)
 		else:
 			self.sess = tf.InteractiveSession(config=config)
