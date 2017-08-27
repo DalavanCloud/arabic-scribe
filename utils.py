@@ -25,6 +25,7 @@ class DataLoader():
         self.tsteps = args.tsteps
         self.data_scale = args.data_scale # scale data down by this factor
         self.ascii_steps = args.tsteps/args.tsteps_per_ascii
+        self.tsteps_per_ascii = args.tsteps_per_ascii
         self.logger = logger
         self.filter = args.filter
         self.limit = limit # removes large noisy gaps in the data
@@ -169,39 +170,90 @@ class DataLoader():
 
 
         # converts a list of arrays into a 2d numpy int16 array
-        def convert_stroke_to_array(stroke):
+        def convert_stroke_to_array(stroke,unicode):
             n_point = 0
             for i in range(len(stroke)):
                 n_point += len(stroke[i])
-            # Creates a numpy matrix of n columns and 3 rows
-            stroke_data = np.zeros((n_point, 3), dtype=np.int16)
+
+            # # Creates a  matrix of n columns and 3 rows
+            stroke_data = []
 
             prev_x = 0
             prev_y = 0
-            counter = 0
 
-            for j in range(len(stroke)):
-                for k in range(len(stroke[j])):
+            pointInterpolationThreshold = self.tsteps_per_ascii
+            avgPointPerCharacter =  n_point/len(unicode)
 
-                    # Creates each point relative to the one before it
-                    # The first index [counter,0] represents the counterth x relative to previous x
-                    stroke_data[counter, 0] = int(stroke[j][k][0]) - prev_x
+            if (avgPointPerCharacter > pointInterpolationThreshold):    # No Interpolation
 
-                    # The second index [counter,1] represents the counterth y relative to the previous y
-                    stroke_data[counter, 1] = int(stroke[j][k][1]) - prev_y
+                for i in range(len(stroke)):
+                    for j in range(len(stroke[i])):
 
-                    prev_x = int(stroke[j][k][0])
-                    prev_y = int(stroke[j][k][1])
+                        # Creates each point relative to the one before it
+                        # The first index [counter,0] represents the counterth x relative to previous x
+                        x = int(stroke[i][j][0]) - prev_x
 
-                    # The third index [counter,2] represents the counterth end of stroke
-                    # if 0 then there is still a point after it in the stroke
-                    stroke_data[counter, 2] = 0
+                        # The second index [counter,1] represents the counterth y relative to the previous y
+                        y = int(stroke[i][j][1]) - prev_y
 
-                    # If there is no point after it then [counter,2] is a 1 flagging it as the end of the stroke
-                    if (k == (len(stroke[j]) - 1)):  # end of stroke
-                        stroke_data[counter, 2] = 1
-                    counter += 1
 
+                        prev_x = int(stroke[i][j][0])
+                        prev_y = int(stroke[i][j][1])
+
+                        # The third index [counter,2] represents the counterth end of stroke
+                        # if 0 then there is still a point after it in the stroke
+                        # If there is no point after it then [counter,2] is a 1 flagging it as the end of the stroke
+                        if (j == (len(stroke[i])-1)):  # end of stroke
+                            eos = 1
+                        else:
+                            eos = 0
+
+                        stroke_data.append([x,y,eos])
+            else:       #Interpolation
+
+                for i in range(len(stroke)):
+                    for j in range(len(stroke[i])):
+
+                        # Creates each point relative to the one before it
+                        # The first index [counter,0] represents the counterth x relative to previous x
+                        x = int(stroke[i][j][0]) - prev_x
+
+                        # The second index [counter,1] represents the counterth y relative to the previous y
+                        y = int(stroke[i][j][1]) - prev_y
+
+
+                        prev_x = int(stroke[i][j][0])
+                        prev_y = int(stroke[i][j][1])
+
+
+                        # The third index [counter,2] represents the counterth end of stroke
+                        # if 0 then there is still a point after it in the stroke
+                        # If there is no point after it then [counter,2] is a 1 flagging it as the end of the stroke
+                        if (j == (len(stroke[i]) - 1)):  # end of stroke
+                            eos = 1
+                        else:
+                            eos = 0
+
+                        if (j == 0) or (x == 0 and y == 0):
+                            stroke_data.append([x, y, eos])
+
+                        elif (x == 0):
+                            yStep = y / abs(y)
+                            for k in range(abs(y)):
+                                newPoint = [x, yStep, 0]
+                                stroke_data.append(newPoint)
+                        elif (y == 0):
+                            xStep = x / abs(x)
+                            for k in range(abs(x)):
+                                newPoint = [xStep, y, 0]
+                                stroke_data.append(newPoint)
+                        else:
+                            stroke_data.append([x, y, eos])
+
+                        if (eos == 1):
+                            stroke_data[-1][2] = 1
+
+            stroke_data = np.array(stroke_data)
             return stroke_data
 
 
@@ -238,8 +290,8 @@ class DataLoader():
             unicode_file = unicodelist[i]
 #                 print 'processing '+stroke_file
 
-            wordStrokes = convert_stroke_to_array(getStrokes(stroke_file)) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
             unicode = getUnicode(unicode_file,self.unknowntoken) # Calls the unicode line of each respective line
+            wordStrokes = convert_stroke_to_array(getStrokes(stroke_file),unicode) # calls getStrokes of the file then passes it as a parameter in convert_stroke_to_array
 
             strokes.append(wordStrokes)
             unicodes.append(unicode)
