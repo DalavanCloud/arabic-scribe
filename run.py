@@ -33,12 +33,12 @@ def main():
 						help='default is unshaped unicode of arabic alphabet and any other unicode charcter will be treated as unknown token')
 	parser.add_argument('--filter', type=str, default=u' \r\t\n', help='remove this from ascii before training')
 	parser.add_argument('--rnn_size', type=int, default=500, help='size of RNN hidden state')
-	parser.add_argument('--tsteps', type=int, default=231, help='RNN time steps (for backprop)')
+	parser.add_argument('--tsteps', type=int, default=250, help='RNN time steps (for backprop)')
 	parser.add_argument('--nmixtures', type=int, default=20, help='number of gaussian mixtures')
 
 	# window params
 	parser.add_argument('--kmixtures', type=int, default=10, help='number of gaussian mixtures for character window')
-	parser.add_argument('--tsteps_per_ascii', type=int, default=33, help='expected number of pen points per character')
+	parser.add_argument('--tsteps_per_ascii', type=int, default=50, help='expected number of pen points per character')
 
 	#Distribution parameters
 	parser.add_argument("--ps_hosts",type=str,default="",help="Comma-separated list of hostname:port pairs")
