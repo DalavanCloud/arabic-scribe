@@ -176,7 +176,9 @@ def train_model(args):
 						model.worker_model.input_data: x, model.worker_model.target_data: y, model.worker_model.char_seq: c, model.worker_model.init_kappa: kappa, \
 						model.worker_model.istate_cell0.c: c0, model.worker_model.istate_cell1.c: c1, model.worker_model.istate_cell2.c: c2, \
 						model.worker_model.istate_cell0.h: h0, model.worker_model.istate_cell1.h: h1, model.worker_model.istate_cell2.h: h2 }
-
+				if i % args.save_every == 0 and (i > 0):
+					[train_loss, valid_loss] = model.sess.run([model.ps_model.cost, model.worker_model.cost], feed)
+					logger.write("train loss : {} | valid loss : {}".format(train_loss, valid_loss))
 				# [train_loss, worker_loss , _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op], feed)
 				start = time.time()
 				# [train_loss, worker_train_loss, _, _] = model.sess.run([model.ps_model.cost, model.worker_model.cost, model.train_op, model.train_op2], feed)
@@ -254,7 +256,7 @@ def sample_model(args, logger=None, add_info=True, model=None, save_path=None):
 
 
 			elif (args.test_epochs):
-				l_save_path = '{}{}.png'.format(save_path, s.encode("UTF-8") + "-" + str(args.iteration) + "-" + str(global_step))
+				l_save_path = '{}{}.png'.format(save_path, s.encode("UTF-8") + "-" + str(args.iteration) + "-" + str(global_step) + "-" + str(args.aggMode))
 				print("Saved to " + l_save_path)
 
 			else:
