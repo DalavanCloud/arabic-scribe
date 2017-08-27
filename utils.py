@@ -378,7 +378,7 @@ class DataLoader():
         self.ascii_data = []
         self.valid_stroke_data = []
         self.valid_ascii_data = []
-        # every 1 in 20 (5%) will be used for validation data
+        # every 1 in 230 (0.4%) will be used for validation data
         cur_data_counter = 0
         validationRegex = re.compile(r"[^ "+ self.alphabet +"]")
         # print(self.calculate_average())
@@ -407,8 +407,8 @@ class DataLoader():
                 data[:,0:2] /= self.data_scale
                 cur_data_counter = cur_data_counter + 1
 
-                # Takes one of every 20 xml files and adds them to the validation set
-                if cur_data_counter % 20 == 0:
+                # Takes one of every 230 xml files and adds them to the validation set
+                if cur_data_counter % 230 == 0:
                     self.valid_stroke_data.append(data)
                     ascii = validationRegex.sub("", self.raw_ascii_data[i])
                     self.valid_ascii_data.append(ascii)
